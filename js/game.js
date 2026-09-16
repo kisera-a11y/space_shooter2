@@ -1,12 +1,17 @@
-import { CANVAS_WIDTH, CANVAS_HEIGHT, ALIEN, ALIEN_TYPES, PLAYER, POWERUP, BOSS, FINAL_BOSS, WAVE_TRANSITION, STATE } from './config.js';
+import { CANVAS_WIDTH, CANVAS_HEIGHT, ALIEN, ALIEN_TYPES, METEOR, PLAYER, POWERUP, BOSS, FINAL_BOSS, WAVE_TRANSITION, STATE } from './config.js';
 import { Player } from './entities/player.js';
 import { Alien } from './entities/alien.js';
+import { Meteor } from './entities/meteor.js';
 import { Explosion } from './entities/explosion.js';
 import { PowerUp } from './entities/powerup.js';
 import { Boss } from './entities/boss.js';
 import { FinalBoss } from './entities/finalBoss.js';
 import { Starfield } from './starfield.js';
 import { playExplosionSound, startBackgroundMusic, stopBackgroundMusic, playLevelUpSound } from './audio.js';
+
+function randomBetween(min, max) {
+  return min + Math.random() * (max - min);
+}
 
 export class Game {
   constructor(ctx, input) {
@@ -21,12 +26,17 @@ export class Game {
     this.player = new Player();
     this.bullets = [];
     this.aliens = [];
+    this.meteors = [];
     this.explosions = [];
     this.powerups = [];
     this.enemyBullets = [];
     this.boss = null;
     this.isBossWave = false;
     this.defeatedFinalBoss = false;
+    this.aliensToSpawn = 0;
+    this.currentWaveSpeed = 0;
+    this.alienSpawnCooldown = 0;
+    this.meteorSpawnCooldown = 0;
     this.waveTransitionTimer = 0;
     this.waveLabelTimer = 0;
     this.levelUpLabelTimer = 0;
@@ -45,32 +55,62 @@ export class Game {
   _spawnWave() {
     this.waveTransitionTimer = WAVE_TRANSITION.holdDuration;
     this.waveLabelTimer = WAVE_TRANSITION.labelDuration;
+    this.meteors = [];
+    this.meteorSpawnCooldown = randomBetween(METEOR.minSpawnInterval, METEOR.maxSpawnInterval);
 
     this.isBossWave = this.wave % BOSS.everyNWaves === 0;
     if (this.isBossWave) {
+      this.aliensToSpawn = 0;
       const bossIndex = this.wave / BOSS.everyNWaves;
       this.boss =
         bossIndex === FINAL_BOSS.bossNumber ? new FinalBoss(bossIndex) : new Boss(bossIndex);
       return;
     }
 
-    const count = Math.min(
+    // Aliens don't spawn all at once anymore — this is just the budget
+    // for the wave; _updateSpawning() trickles them in one at a time at
+    // random x positions (see ALIEN.minSpawnInterval/maxSpawnInterval).
+    this.aliensToSpawn = Math.min(
       ALIEN.countBase + (this.wave - 1) * ALIEN.countPerWave,
       ALIEN.maxCount
     );
-    const speed = ALIEN.baseSpeed + (this.wave - 1) * ALIEN.speedPerWave;
+    this.currentWaveSpeed = ALIEN.baseSpeed + (this.wave - 1) * ALIEN.speedPerWave;
+    this.alienSpawnCooldown = 0;
+  }
 
-    const cols = Math.min(count, Math.floor(CANVAS_WIDTH / ALIEN.colSpacing));
-    const startX = (CANVAS_WIDTH - cols * ALIEN.colSpacing) / 2 + ALIEN.colSpacing / 2;
+  _spawnSingleAlien() {
+    const typeKey = this._pickAlienType();
+    const width = ALIEN_TYPES[typeKey].width;
+    const x = Math.random() * (CANVAS_WIDTH - width);
+    const y = -ALIEN_TYPES[typeKey].height;
+    this.aliens.push(new Alien(x, y, this.currentWaveSpeed, typeKey));
+  }
 
-    for (let i = 0; i < count; i++) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const typeKey = this._pickAlienType();
-      const width = ALIEN_TYPES[typeKey].width;
-      const x = startX + col * ALIEN.colSpacing - width / 2;
-      const y = -ALIEN.rowSpacing * (row + 1);
-      this.aliens.push(new Alien(x, y, speed, typeKey));
+  _spawnMeteor() {
+    const size = METEOR.baseSize * (1 + (Math.random() * 2 - 1) * METEOR.sizeVariance);
+    const x = Math.random() * (CANVAS_WIDTH - size);
+    const baseSpeed = ALIEN.baseSpeed + (this.wave - 1) * ALIEN.speedPerWave;
+    const speed = baseSpeed * (1 + (Math.random() * 2 - 1) * METEOR.speedVariance);
+    this.meteors.push(new Meteor(x, -size, size, speed));
+  }
+
+  // Trickles regular-wave aliens and meteors in on independent random
+  // timers instead of a synchronized front line — meteors run on boss
+  // waves too, aliens don't (the boss is the only thing coming at you then).
+  _updateSpawning(dt) {
+    if (!this.isBossWave && this.aliensToSpawn > 0) {
+      this.alienSpawnCooldown -= dt;
+      if (this.alienSpawnCooldown <= 0) {
+        this._spawnSingleAlien();
+        this.aliensToSpawn -= 1;
+        this.alienSpawnCooldown = randomBetween(ALIEN.minSpawnInterval, ALIEN.maxSpawnInterval);
+      }
+    }
+
+    this.meteorSpawnCooldown -= dt;
+    if (this.meteorSpawnCooldown <= 0) {
+      this._spawnMeteor();
+      this.meteorSpawnCooldown = randomBetween(METEOR.minSpawnInterval, METEOR.maxSpawnInterval);
     }
   }
 
@@ -132,11 +172,14 @@ export class Game {
     for (const bullet of this.bullets) bullet.update(dt);
     this.bullets = this.bullets.filter((b) => !b.isOffscreen());
 
-    // Aliens/boss hold in place for the first moment of a new wave (see
-    // WAVE_TRANSITION) instead of immediately being in motion.
+    // Aliens/boss/meteors hold in place for the first moment of a new
+    // wave (see WAVE_TRANSITION) instead of immediately being in motion,
+    // and nothing new spawns during that beat either.
     if (this.waveTransitionTimer <= 0) {
       for (const alien of this.aliens) alien.update(dt);
+      for (const meteor of this.meteors) meteor.update(dt);
       if (this.boss) this.boss.update(dt, this.enemyBullets);
+      this._updateSpawning(dt);
     }
 
     for (const bullet of this.enemyBullets) bullet.update(dt);
@@ -157,7 +200,8 @@ export class Game {
       const collidedAlien = this.aliens.find((a) => this._isColliding(this.player, a));
       const collidedEnemyBullet = this.enemyBullets.find((b) => this._isColliding(this.player, b));
       const collidedBoss = this.boss && this._isColliding(this.player, this.boss);
-      if (collidedAlien || collidedEnemyBullet || collidedBoss) {
+      const collidedMeteor = this.meteors.find((m) => this._isColliding(this.player, m));
+      if (collidedAlien || collidedEnemyBullet || collidedBoss || collidedMeteor) {
         if (collidedEnemyBullet) collidedEnemyBullet.hit = true;
         this._loseLife();
       }
@@ -165,11 +209,14 @@ export class Game {
     this.powerups = this.powerups.filter((p) => !p.collected && !p.isOffscreen());
     this.enemyBullets = this.enemyBullets.filter((b) => !b.hit);
 
-    // An alien that slips past without touching the ship just despawns —
-    // only an actual collision (handled above) costs a life.
+    // An alien or meteor that slips past without touching the ship just
+    // despawns — only an actual collision (handled above) costs a life.
     this.aliens = this.aliens.filter((a) => !a.hasReachedBottom());
+    this.meteors = this.meteors.filter((m) => !m.hasReachedBottom());
 
-    const waveCleared = this.isBossWave ? this.boss === null : this.aliens.length === 0;
+    const waveCleared = this.isBossWave
+      ? this.boss === null
+      : this.aliensToSpawn <= 0 && this.aliens.length === 0;
     if (waveCleared && this.state === STATE.PLAYING) {
       if (this.defeatedFinalBoss) {
         this.state = STATE.VICTORY;
@@ -221,6 +268,18 @@ export class Game {
           if (isFinalBoss) this.defeatedFinalBoss = true;
         }
       }
+
+      // Meteors are unkillable: they absorb any bullet (even a piercing
+      // one — a solid rock stops a laser that shreds through soft
+      // aliens) but take no damage and give no score/xp.
+      if (!bullet.hit) {
+        for (const meteor of this.meteors) {
+          if (this._isColliding(bullet, meteor)) {
+            bullet.hit = true;
+            break;
+          }
+        }
+      }
     }
     this.bullets = this.bullets.filter((b) => !b.hit);
     this.aliens = this.aliens.filter((a) => !a.destroyed);
@@ -270,6 +329,7 @@ export class Game {
   _loseLife() {
     this.lives -= 1;
     this.aliens = [];
+    this.meteors = [];
     this.bullets = [];
     this.powerups = [];
     this.enemyBullets = [];
@@ -311,6 +371,7 @@ export class Game {
     this.player.draw(ctx);
     for (const bullet of this.bullets) bullet.draw(ctx);
     for (const alien of this.aliens) alien.draw(ctx);
+    for (const meteor of this.meteors) meteor.draw(ctx);
     if (this.boss) this.boss.draw(ctx);
     for (const bullet of this.enemyBullets) bullet.draw(ctx);
     for (const powerup of this.powerups) powerup.draw(ctx);
@@ -380,7 +441,7 @@ export class Game {
     ctx.font = '20px "Courier New", monospace';
     ctx.fillText('Move: ← → / A / D / on-screen buttons', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
     ctx.fillText('Shoot: SPACE or ● (hold for rapid fire)', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 12);
-    ctx.fillText('Destroy aliens before they reach you!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 44);
+    ctx.fillText('Shoot aliens, dodge the meteors!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 44);
 
     ctx.fillStyle = '#ffe066';
     ctx.font = 'bold 24px "Courier New", monospace';

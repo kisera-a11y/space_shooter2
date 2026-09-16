@@ -27,14 +27,34 @@ export const BULLET = {
   chargedColor: '#8be9ff',
 };
 
+// Aliens no longer spawn all at once in a grid — each wave has a fixed
+// budget (count) that trickles in one at a time at a random x position,
+// with a random gap between spawns, so arrivals feel staggered/continuous
+// rather than a synchronized front line. A wave is "cleared" once its
+// whole budget has been spawned and none remain on screen (killed or
+// passed through — passing through is harmless, see Game._loseLife).
 export const ALIEN = {
   baseSpeed: 30, // pixels per second, downward (halved from 60)
   speedPerWave: 4, // added to baseSpeed each wave (halved from 8)
   countBase: 5, // aliens in wave 1
   countPerWave: 2, // additional aliens each wave
   maxCount: 20,
-  rowSpacing: 50,
-  colSpacing: 55,
+  minSpawnInterval: 0.5, // seconds between individual alien spawns
+  maxSpawnInterval: 1.1,
+};
+
+// Unkillable rocks that drift down alongside aliens, tumbling with a
+// random rotation — pure obstacles the player has to dodge rather than
+// shoot. Bullets (even piercing ones) are absorbed on contact but do
+// nothing to the rock; touching the ship costs a life like an alien would.
+export const METEOR = {
+  minSpawnInterval: 1.5,
+  maxSpawnInterval: 3,
+  baseSize: 34,
+  sizeVariance: 0.35, // +/- fraction applied to baseSize per instance
+  speedVariance: 0.25, // +/- fraction applied to the wave's alien speed
+  maxRotationSpeed: 2.5, // radians/sec, direction randomized per instance
+  color: '#8a7f73',
 };
 
 export const ENEMY_BULLET = {

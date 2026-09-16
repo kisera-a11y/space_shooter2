@@ -28,6 +28,7 @@ js/
                        cooldown, respawn, drawing
     bullet.js           Player projectile (normal, parallel/spread, or charged-laser)
     alien.js             Alien: type-driven stats/shape, hp, downward movement
+    meteor.js             Unkillable tumbling rock — a pure dodge hazard
     boss.js               Large boss: entry, left/right patrol, firing, hp/health bar,
                           four visually distinct variants
     finalBoss.js            One-time capstone boss: extends Boss with a forward/back
@@ -64,12 +65,17 @@ server is recommended.)
 
 ## Gameplay
 
-- Destroy aliens by shooting them to score points.
+- Destroy aliens by shooting them to score points and XP.
+- Aliens for a regular wave trickle in one at a time at random x
+  positions and random intervals — not a synchronized grid — so it reads
+  more like flying through a stream of oncoming ships than clearing a
+  fixed formation.
 - If an alien actually touches the ship, you lose a life and the wave
   resets — an alien that merely passes the bottom of the screen without
-  hitting you just despawns.
-- Clearing all aliens in a wave advances you to the next wave, which
-  spawns more aliens moving faster.
+  hitting you just despawns with no penalty.
+- A wave is "cleared" once its full budget of aliens has been spawned and
+  none remain on screen (killed or passed through), advancing you to the
+  next wave, which spawns more aliens moving faster.
 - The game ends when you run out of lives; press Space to restart.
 
 ### Alien types
@@ -82,6 +88,17 @@ type's `minWave`, so adding another type later is just a new config entry:
 - **Brute** (purple, larger) — takes 3 hits to destroy and is worth more
   points, from wave 3. Remaining hits are shown as pips above it and it
   visibly dims as it takes damage.
+
+### Meteors
+
+Alongside aliens, unkillable rocks (`js/entities/meteor.js`) tumble down
+with a random rotation speed/direction and irregular jagged silhouette —
+pure obstacles, not enemies. Bullets (even the piercing charged laser)
+are absorbed on contact but do nothing to them; touching the ship costs
+a life just like an alien would. They spawn continuously throughout both
+regular and boss waves on their own independent timer (`METEOR` in
+`config.js`), reinforcing the "dodge hazards while shooting enemies" feel
+rather than being tied to a wave's kill count.
 
 ### Power-ups
 
