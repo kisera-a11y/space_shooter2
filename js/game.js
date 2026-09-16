@@ -1,4 +1,4 @@
-import { CANVAS_WIDTH, CANVAS_HEIGHT, ALIEN, ALIEN_TYPES, METEOR, PLAYER, POWERUP, BOSS, BOSS_DEATH, FINAL_BOSS, WAVE_TRANSITION, STATE, WEAPON_LEVELS } from './config.js';
+import { CANVAS_WIDTH, CANVAS_HEIGHT, ALIEN, ALIEN_TYPES, METEOR, PLAYER, POWERUP, BOSS, BOSS_DEATH, FINAL_BOSS, WAVE_TRANSITION, STATE, WEAPON_LEVELS, GAME_OVER_INPUT_DELAY } from './config.js';
 import { Player } from './entities/player.js';
 import { Alien } from './entities/alien.js';
 import { Meteor } from './entities/meteor.js';
@@ -49,6 +49,7 @@ export class Game {
     this.screenShakeTimer = 0;
     this.screenShakeDuration = 0;
     this.screenShakeMagnitude = 0;
+    this.gameOverInputDelay = 0;
     this.score = 0;
     this.lives = PLAYER.startLives;
     this.wave = 1;
@@ -166,7 +167,14 @@ export class Game {
     }
 
     if (this.state === STATE.GAME_OVER) {
-      if (this.input.consumeFirePressed()) {
+      // Actively discard fire presses for a brief grace window right after
+      // death, rather than only clearing whatever was pending the instant
+      // GAME_OVER began — see GAME_OVER_INPUT_DELAY for why the latter
+      // alone still leaves a race that can skip this screen entirely.
+      if (this.gameOverInputDelay > 0) {
+        this.gameOverInputDelay = Math.max(0, this.gameOverInputDelay - dt);
+        this.input.consumeFirePressed();
+      } else if (this.input.consumeFirePressed()) {
         this.startGame();
       }
       return;
@@ -500,11 +508,13 @@ export class Game {
 
     if (this.lives <= 0) {
       this.state = STATE.GAME_OVER;
-      // Discard any fire-press left over from holding Space/the fire
-      // button while dying — otherwise that stale signal is immediately
-      // read as "confirm" on the very next frame and skips this screen
-      // straight into a restart.
+      // Discard any fire-press already pending (e.g. from holding fire
+      // while dying) immediately, then keep discarding for a grace
+      // window (see GAME_OVER_INPUT_DELAY) to also catch a fresh press
+      // landing right after — otherwise either can read as "confirm" on
+      // an early frame and skip this screen straight into a restart.
       this.input.consumeFirePressed();
+      this.gameOverInputDelay = GAME_OVER_INPUT_DELAY;
       stopBackgroundMusic();
       const result = recordScore(this.score, this.wave);
       this.lastRunRank = result.rank;

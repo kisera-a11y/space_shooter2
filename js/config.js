@@ -4,6 +4,15 @@
 export const CANVAS_WIDTH = 800;
 export const CANVAS_HEIGHT = 600;
 
+// How long the Game Over screen ignores the fire/confirm input after it
+// first appears. A single immediate consumeFirePressed() call at the
+// moment of death only clears whatever was *already* pending — it can't
+// stop a fresh press that lands in the brief window between that call
+// and the next frame (very plausible if the player is mashing fire right
+// as the fatal hit lands). Actively discarding fire presses for a short
+// grace window instead of just checking once closes that race outright.
+export const GAME_OVER_INPUT_DELAY = 0.5;
+
 export const PLAYER = {
   width: 40,
   height: 30,
