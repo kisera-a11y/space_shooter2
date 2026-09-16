@@ -63,6 +63,7 @@ server is recommended.)
 - **Move**: `←` / `→` arrow keys or `A` / `D`
 - **Shoot**: `Space` (hold for repeated shots — a small cooldown keeps
   the screen from filling with bullets instantly)
+- **Pause**: `P` / `Escape` or the on-screen ⏸ button, at any time while playing
 - **Start / Restart**: `Space`, from the start screen or game-over screen
 
 ## Gameplay
@@ -118,6 +119,29 @@ drop a falling pickup; touch it with the ship to collect:
 When an alien (or a boss's shot) hits the ship, it plays an explosion
 (particle burst + a synthesized boom), disappears for a moment, then
 reappears re-centered at the bottom before play continues.
+
+### Pause menu
+
+Pressing `P` / `Escape`, or tapping the on-screen ⏸ button (always visible,
+unlike the touch-only move/fire buttons), freezes the run at any time
+during play: all entities, timers, and spawning stop advancing, a dimmed
+"PAUSED" overlay is drawn over the frozen game world, and the background
+music stops. Pressing the same key/button again resumes exactly where it
+left off, music included. The pause toggle is edge-triggered like the
+fire key (only a genuine key-down counts, not the OS's auto-repeat while
+held), so holding `P` down can't rapidly flicker the game in and out of
+pause.
+
+### Losing a life costs a weapon level
+
+To raise the stakes on staying alive, losing a life doesn't just cost a
+life — it also demotes the player's weapon one tier (`Player.loseLevel()`
+in `js/entities/player.js`) and resets XP down to that lower tier's
+threshold, so the lost upgrade has to be earned back from scratch rather
+than picking up where it left off. A "LEVEL DOWN!" banner (with a
+descending arpeggio, the inverse of the level-up sound) shows the weapon
+you dropped back to. There's no demotion below the starting weapon —
+dying at the base tier just costs the life.
 
 ### Wave transitions
 

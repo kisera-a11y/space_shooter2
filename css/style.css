@@ -86,3 +86,28 @@ html, body {
 .touch-btn:active {
   background: rgba(79, 209, 255, 0.4);
 }
+
+/* Positioned below the "Lives" HUD text (top-right, canvas-internal
+   y=28) rather than right in the corner, so it doesn't sit on top of it. */
+.pause-btn {
+  position: absolute;
+  top: 50px;
+  right: 16px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid rgba(79, 209, 255, 0.7);
+  background: rgba(79, 209, 255, 0.15);
+  color: #4fd1ff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pause-btn:active {
+  background: rgba(79, 209, 255, 0.4);
+}

@@ -10,6 +10,11 @@
   <div id="game-wrapper">
     <canvas id="game-canvas" width="800" height="600"></canvas>
 
+    <!-- Always visible (mouse, touch, or the P/Escape keyboard shortcut
+         all do the same thing) — unlike the move/fire controls below,
+         this isn't touch-only. -->
+    <button id="btn-pause" class="pause-btn" aria-label="Pause">⏸</button>
+
     <!-- Shown only on touch devices (see CSS media query). Buttons are
          held down like keys: pointerdown/up drive InputHandler's touch
          state the same way keydown/up drive its keyboard state. -->

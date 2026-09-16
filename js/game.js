@@ -7,7 +7,7 @@ import { PowerUp } from './entities/powerup.js';
 import { Boss } from './entities/boss.js';
 import { FinalBoss } from './entities/finalBoss.js';
 import { Starfield } from './starfield.js';
-import { playExplosionSound, startBackgroundMusic, stopBackgroundMusic, playLevelUpSound } from './audio.js';
+import { playExplosionSound, startBackgroundMusic, stopBackgroundMusic, playLevelUpSound, playLevelDownSound } from './audio.js';
 import { getHighScores, recordScore } from './highscores.js';
 
 function randomBetween(min, max) {
@@ -40,6 +40,7 @@ export class Game {
     this.waveTransitionTimer = 0;
     this.waveLabelTimer = 0;
     this.levelUpLabelTimer = 0;
+    this.levelDownLabelTimer = 0;
     this.milestoneLabelTimer = 0;
     this.score = 0;
     this.lives = PLAYER.startLives;
@@ -143,6 +144,13 @@ export class Game {
   update(dt) {
     this.starfield.update(dt);
 
+    if (
+      this.input.consumePausePressed() &&
+      (this.state === STATE.PLAYING || this.state === STATE.PAUSED)
+    ) {
+      this._togglePause();
+    }
+
     if (this.state === STATE.START) {
       if (this.input.consumeFirePressed()) {
         this.startGame();
@@ -157,7 +165,26 @@ export class Game {
       return;
     }
 
+    if (this.state === STATE.PAUSED) {
+      return;
+    }
+
     this._updatePlaying(dt);
+  }
+
+  // Reuses the background-music start/stop rather than AudioContext
+  // suspend/resume: the chiptune loop reschedules itself via its own
+  // setTimeout chain independent of this update loop, and getContext()
+  // auto-resumes a suspended context on any sound call, which would
+  // silently undo a suspend-based pause the next time a note fires.
+  _togglePause() {
+    if (this.state === STATE.PLAYING) {
+      this.state = STATE.PAUSED;
+      stopBackgroundMusic();
+    } else {
+      this.state = STATE.PLAYING;
+      startBackgroundMusic();
+    }
   }
 
   _updatePlaying(dt) {
@@ -169,6 +196,9 @@ export class Game {
     }
     if (this.levelUpLabelTimer > 0) {
       this.levelUpLabelTimer = Math.max(0, this.levelUpLabelTimer - dt);
+    }
+    if (this.levelDownLabelTimer > 0) {
+      this.levelDownLabelTimer = Math.max(0, this.levelDownLabelTimer - dt);
     }
     if (this.milestoneLabelTimer > 0) {
       this.milestoneLabelTimer = Math.max(0, this.milestoneLabelTimer - dt);
@@ -322,6 +352,11 @@ export class Game {
     playLevelUpSound();
   }
 
+  _showLevelDown() {
+    this.levelDownLabelTimer = 1.4;
+    playLevelDownSound();
+  }
+
   _isColliding(a, b) {
     return (
       a.x < b.x + b.width &&
@@ -333,6 +368,9 @@ export class Game {
 
   _loseLife() {
     this.lives -= 1;
+    if (this.player.loseLevel()) {
+      this._showLevelDown();
+    }
     this.aliens = [];
     this.meteors = [];
     this.bullets = [];
@@ -393,16 +431,20 @@ export class Game {
 
     this._drawHud();
     // Transient labels only make sense mid-run — suppressing them once the
-    // game is over avoids one ghosting faintly through that screen's
-    // semi-transparent overlay if death happens while one is still showing.
+    // game leaves PLAYING avoids one ghosting faintly through the
+    // game-over/pause screens' semi-transparent overlays if it's still
+    // showing right when that happens.
     if (this.state === STATE.PLAYING) {
       this._drawWaveLabel();
       this._drawLevelUpLabel();
+      this._drawLevelDownLabel();
       this._drawMilestoneLabel();
     }
 
     if (this.state === STATE.GAME_OVER) {
       this._drawGameOverScreen();
+    } else if (this.state === STATE.PAUSED) {
+      this._drawPauseScreen();
     }
   }
 
@@ -460,6 +502,36 @@ export class Game {
     ctx.textAlign = 'left';
   }
 
+  _drawLevelDownLabel() {
+    if (this.levelDownLabelTimer <= 0) return;
+    const ctx = this.ctx;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff5c8a';
+    ctx.font = 'bold 30px "Courier New", monospace';
+    ctx.fillText('LEVEL DOWN!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 60);
+    ctx.font = 'bold 18px "Courier New", monospace';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`Reverted to: ${this.player.weapon.name}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 90);
+    ctx.textAlign = 'left';
+  }
+
+  _drawPauseScreen() {
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#4fd1ff';
+    ctx.font = 'bold 44px "Courier New", monospace';
+    ctx.fillText('PAUSED', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 10);
+
+    ctx.fillStyle = '#ffe066';
+    ctx.font = 'bold 18px "Courier New", monospace';
+    ctx.fillText('Press P or tap ⏸ to Resume', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 30);
+
+    ctx.textAlign = 'left';
+  }
+
   _drawStartScreen() {
     const ctx = this.ctx;
     ctx.textAlign = 'center';
@@ -471,19 +543,22 @@ export class Game {
     ctx.fillStyle = '#ffffff';
     ctx.font = '20px "Courier New", monospace';
     ctx.fillText('Move: ← → / A / D / on-screen buttons', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
-    ctx.fillText('Shoot: SPACE or ● (hold for rapid fire)', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 12);
+    ctx.fillText('Shoot: SPACE or ● | Pause: P or ⏸', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 12);
     ctx.fillText('Shoot aliens, dodge the meteors!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 44);
+
+    ctx.fillStyle = '#ff5c8a';
+    ctx.fillText('Losing a life costs your latest weapon level!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 72);
 
     const bestScore = getHighScores()[0]?.score;
     if (bestScore) {
       ctx.fillStyle = '#8be9ff';
       ctx.font = 'bold 18px "Courier New", monospace';
-      ctx.fillText(`Best Score: ${bestScore}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 78);
+      ctx.fillText(`Best Score: ${bestScore}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 100);
     }
 
     ctx.fillStyle = '#ffe066';
     ctx.font = 'bold 24px "Courier New", monospace';
-    ctx.fillText('Press SPACE to Start', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 118);
+    ctx.fillText('Press SPACE to Start', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 136);
 
     ctx.textAlign = 'left';
   }

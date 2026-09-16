@@ -106,6 +106,30 @@ export function playLevelUpSound() {
   });
 }
 
+export function playLevelDownSound() {
+  const ctx = getContext();
+  const now = ctx.currentTime;
+  const notes = [1046.5, 783.99, 659.25, 523.25]; // C6, G5, E5, C5 — descending
+  const noteDuration = 0.11;
+
+  notes.forEach((freq, i) => {
+    const startTime = now + i * noteDuration;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(freq, startTime);
+
+    gain.gain.setValueAtTime(0.15, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + noteDuration);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + noteDuration);
+  });
+}
+
 export function playEnemyFireSound() {
   const ctx = getContext();
   const now = ctx.currentTime;

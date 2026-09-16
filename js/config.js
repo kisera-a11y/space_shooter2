@@ -217,5 +217,6 @@ export const STAR_COUNT = 90;
 export const STATE = {
   START: 'start',
   PLAYING: 'playing',
+  PAUSED: 'paused',
   GAME_OVER: 'game_over',
 };

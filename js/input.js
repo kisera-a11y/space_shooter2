@@ -5,6 +5,7 @@ export class InputHandler {
   constructor() {
     this.keys = new Set();
     this.firePressed = false; // edge-triggered, for start/restart prompts
+    this.pausePressed = false; // edge-triggered, for the pause toggle
 
     this.touchLeft = false;
     this.touchRight = false;
@@ -14,6 +15,7 @@ export class InputHandler {
     window.addEventListener('keyup', (e) => this._onKeyUp(e));
 
     this._bindTouchControls();
+    this._bindPauseButton();
   }
 
   // Wires up the on-screen buttons (see index.html/#touch-controls) using
@@ -34,6 +36,17 @@ export class InputHandler {
     this._bindHoldButton(fireBtn, (down) => {
       this.touchFiring = down;
       if (down) this.firePressed = true;
+    });
+  }
+
+  // The pause button is a tap/click, not a hold — it just needs to raise
+  // the edge-triggered flag once per press, same as the P/Escape keys.
+  _bindPauseButton() {
+    const pauseBtn = document.getElementById('btn-pause');
+    if (!pauseBtn) return;
+    pauseBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      this.pausePressed = true;
     });
   }
 
@@ -64,6 +77,9 @@ export class InputHandler {
       }
       e.preventDefault();
     }
+    if ((e.code === 'KeyP' || e.code === 'Escape') && !e.repeat) {
+      this.pausePressed = true;
+    }
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.code)) {
       e.preventDefault();
     }
@@ -89,6 +105,13 @@ export class InputHandler {
   consumeFirePressed() {
     const pressed = this.firePressed;
     this.firePressed = false;
+    return pressed;
+  }
+
+  // Returns true once per press, then resets. Used for the pause toggle.
+  consumePausePressed() {
+    const pressed = this.pausePressed;
+    this.pausePressed = false;
     return pressed;
   }
 }

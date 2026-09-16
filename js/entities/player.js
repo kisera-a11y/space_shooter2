@@ -31,6 +31,17 @@ export class Player {
     return leveledUp;
   }
 
+  // Losing a life costs the player their most recent weapon upgrade —
+  // dropped a level and reset to that level's xp floor, so they have to
+  // earn it back rather than just keeping partial progress toward it.
+  // Returns true if a demotion actually happened (false at level 1).
+  loseLevel() {
+    if (this.level <= 1) return false;
+    this.level -= 1;
+    this.xp = XP.levelThresholds[this.level - 1];
+    return true;
+  }
+
   update(dt, input, bullets) {
     if (this.respawnTimer > 0) {
       this.respawnTimer = Math.max(0, this.respawnTimer - dt);
