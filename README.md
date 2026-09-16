@@ -27,9 +27,12 @@ js/
     player.js          Player ship: movement, firing, cooldown, respawn, drawing
     bullet.js           Player projectile (normal or charged-laser variant)
     alien.js             Alien: type-driven stats/shape, hp, downward movement
+    boss.js               Large boss: entry, left/right patrol, firing, hp/health bar
+    enemyBullet.js         Boss projectile aimed down at the player
     powerup.js            Falling pickup (charged laser / extra life)
     explosion.js          Configurable particle burst (alien kill, ship loss, pickup)
-  audio.js              Synthesized sound effects (Web Audio API, no asset files)
+  audio.js              Synthesized sound effects + 8-bit chiptune loop (Web Audio
+                        API, no asset files)
   main.js               Bootstraps the canvas, input, game loop (requestAnimationFrame)
 ```
 
@@ -89,16 +92,34 @@ drop a falling pickup; touch it with the ship to collect:
 
 ### Losing a life
 
-When an alien collides with the ship, it plays an explosion (particle
-burst + a synthesized boom), disappears for a moment, then reappears
-re-centered at the bottom before play continues.
+When an alien (or a boss's shot) hits the ship, it plays an explosion
+(particle burst + a synthesized boom), disappears for a moment, then
+reappears re-centered at the bottom before play continues.
+
+### Boss fights
+
+Every `BOSS.everyNWaves` waves (3 by default), the regular wave is
+replaced by a single large boss — about a third of the screen wide —
+instead of normal aliens:
+
+- It descends into place, then patrols left/right along the top of the
+  screen; it never advances toward the player like regular aliens do.
+- It periodically fires a bullet straight down at the player.
+- Its remaining hp is shown as a health bar above it (green → yellow →
+  red as it takes damage).
+- Each successive boss (the 2nd, 3rd, ...) has more hp, moves faster,
+  and fires more often, via `BOSS.hpPerBoss` / `moveSpeedPerBoss` /
+  `fireIntervalStepDown` in `config.js`.
+- Losing a life mid-fight doesn't reset the boss's hp — only a regular
+  wave respawns a fresh set of aliens after you die.
 
 ### Sound
 
 All sound is synthesized with the Web Audio API (`js/audio.js`) — no
-audio asset files. A quiet ambient drone plays while a run is active
-(starts on Space to begin, stops on game over), alongside the laser-fire
-and explosion sound effects.
+audio asset files. An 8-bit style chiptune loop (square-wave melody +
+triangle-wave bass) plays while a run is active (starts on Space to
+begin, stops on game over), alongside the laser-fire, enemy-fire, and
+explosion sound effects.
 
 ## What's next
 

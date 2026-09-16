@@ -28,13 +28,42 @@ export const BULLET = {
 };
 
 export const ALIEN = {
-  baseSpeed: 60, // pixels per second, downward
-  speedPerWave: 8, // added to baseSpeed each wave (slowed ~1/3 from the original 12)
+  baseSpeed: 30, // pixels per second, downward (halved from 60)
+  speedPerWave: 4, // added to baseSpeed each wave (halved from 8)
   countBase: 5, // aliens in wave 1
   countPerWave: 2, // additional aliens each wave
   maxCount: 20,
   rowSpacing: 50,
   colSpacing: 55,
+};
+
+export const ENEMY_BULLET = {
+  width: 6,
+  height: 14,
+  speed: 220, // pixels per second, downward
+  color: '#ff4d6d',
+};
+
+// A single large boss replaces the regular wave every BOSS.everyNWaves
+// waves. It hovers near the top, patrols left/right, and shoots at the
+// player instead of descending — bossIndex (1st boss, 2nd boss, ...)
+// scales hp/speed/fire rate so each encounter is tougher than the last.
+export const BOSS = {
+  everyNWaves: 3,
+  widthRatio: 1 / 3, // "about a third of the screen" wide
+  heightRatio: 0.22,
+  entryY: 60, // resting height once it finishes entering
+  entrySpeed: 80, // px/s while descending into position
+  baseMoveSpeed: 70, // horizontal patrol speed for the 1st boss
+  moveSpeedPerBoss: 15,
+  baseHp: 40,
+  hpPerBoss: 25,
+  baseFireInterval: 1.6, // seconds between shots, 1st boss
+  fireIntervalStepDown: 0.2,
+  minFireInterval: 0.5,
+  baseScoreValue: 200,
+  scorePerBoss: 100,
+  color: '#ff2e63',
 };
 
 // Power-ups drop from destroyed aliens and fall straight down; the player

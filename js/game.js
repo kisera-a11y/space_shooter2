@@ -1,8 +1,9 @@
-import { CANVAS_WIDTH, CANVAS_HEIGHT, ALIEN, ALIEN_TYPES, PLAYER, POWERUP, STATE } from './config.js';
+import { CANVAS_WIDTH, CANVAS_HEIGHT, ALIEN, ALIEN_TYPES, PLAYER, POWERUP, BOSS, STATE } from './config.js';
 import { Player } from './entities/player.js';
 import { Alien } from './entities/alien.js';
 import { Explosion } from './entities/explosion.js';
 import { PowerUp } from './entities/powerup.js';
+import { Boss } from './entities/boss.js';
 import { Starfield } from './starfield.js';
 import { playExplosionSound, startBackgroundMusic, stopBackgroundMusic } from './audio.js';
 
@@ -21,6 +22,9 @@ export class Game {
     this.aliens = [];
     this.explosions = [];
     this.powerups = [];
+    this.enemyBullets = [];
+    this.boss = null;
+    this.isBossWave = false;
     this.score = 0;
     this.lives = PLAYER.startLives;
     this.wave = 1;
@@ -34,6 +38,12 @@ export class Game {
   }
 
   _spawnWave() {
+    this.isBossWave = this.wave % BOSS.everyNWaves === 0;
+    if (this.isBossWave) {
+      this.boss = new Boss(this.wave / BOSS.everyNWaves);
+      return;
+    }
+
     const count = Math.min(
       ALIEN.countBase + (this.wave - 1) * ALIEN.countPerWave,
       ALIEN.maxCount
@@ -104,6 +114,10 @@ export class Game {
 
     for (const alien of this.aliens) alien.update(dt);
 
+    if (this.boss) this.boss.update(dt, this.enemyBullets);
+    for (const bullet of this.enemyBullets) bullet.update(dt);
+    this.enemyBullets = this.enemyBullets.filter((b) => !b.isOffscreen());
+
     for (const powerup of this.powerups) powerup.update(dt);
 
     for (const explosion of this.explosions) explosion.update(dt);
@@ -117,17 +131,21 @@ export class Game {
       this._handlePowerupCollisions();
 
       const collidedAlien = this.aliens.find((a) => this._isColliding(this.player, a));
-      if (collidedAlien) {
+      const collidedEnemyBullet = this.enemyBullets.find((b) => this._isColliding(this.player, b));
+      if (collidedAlien || collidedEnemyBullet) {
+        if (collidedEnemyBullet) collidedEnemyBullet.hit = true;
         this._loseLife();
       }
     }
     this.powerups = this.powerups.filter((p) => !p.collected && !p.isOffscreen());
+    this.enemyBullets = this.enemyBullets.filter((b) => !b.hit);
 
     // An alien that slips past without touching the ship just despawns —
     // only an actual collision (handled above) costs a life.
     this.aliens = this.aliens.filter((a) => !a.hasReachedBottom());
 
-    if (this.aliens.length === 0 && this.state === STATE.PLAYING) {
+    const waveCleared = this.isBossWave ? this.boss === null : this.aliens.length === 0;
+    if (waveCleared && this.state === STATE.PLAYING) {
       this.wave += 1;
       this._spawnWave();
     }
@@ -150,6 +168,23 @@ export class Game {
             }
           }
           if (!bullet.pierce) break; // a normal bullet can only hit one alien
+        }
+      }
+
+      if (this.boss && !bullet.hit && this._isColliding(bullet, this.boss)) {
+        if (!bullet.pierce) bullet.hit = true;
+        if (this.boss.takeHit(bullet.damage)) {
+          this.score += this.boss.scoreValue;
+          this.explosions.push(
+            new Explosion(this.boss.centerX, this.boss.centerY, {
+              duration: 1,
+              minRadius: 10,
+              maxRadius: 90,
+              particleCount: 24,
+              color: '#ffb347',
+            })
+          );
+          this.boss = null;
         }
       }
     }
@@ -198,6 +233,7 @@ export class Game {
     this.aliens = [];
     this.bullets = [];
     this.powerups = [];
+    this.enemyBullets = [];
 
     this.explosions.push(
       new Explosion(this.player.centerX, this.player.centerY, {
@@ -215,7 +251,11 @@ export class Game {
       stopBackgroundMusic();
     } else {
       this.player.respawn();
-      this._spawnWave();
+      // A boss fight in progress just keeps its hp — only a regular wave
+      // needs a fresh set of aliens spawned back in.
+      if (!this.isBossWave) {
+        this._spawnWave();
+      }
     }
   }
 
@@ -232,6 +272,8 @@ export class Game {
     this.player.draw(ctx);
     for (const bullet of this.bullets) bullet.draw(ctx);
     for (const alien of this.aliens) alien.draw(ctx);
+    if (this.boss) this.boss.draw(ctx);
+    for (const bullet of this.enemyBullets) bullet.draw(ctx);
     for (const powerup of this.powerups) powerup.draw(ctx);
     for (const explosion of this.explosions) explosion.draw(ctx);
 
