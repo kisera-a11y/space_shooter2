@@ -1,4 +1,4 @@
-import { CANVAS_WIDTH, CANVAS_HEIGHT, ALIEN, PLAYER, STATE } from './config.js';
+import { CANVAS_WIDTH, CANVAS_HEIGHT, ALIEN, ALIEN_TYPES, PLAYER, STATE } from './config.js';
 import { Player } from './entities/player.js';
 import { Alien } from './entities/alien.js';
 import { Explosion } from './entities/explosion.js';
@@ -42,10 +42,21 @@ export class Game {
     for (let i = 0; i < count; i++) {
       const col = i % cols;
       const row = Math.floor(i / cols);
-      const x = startX + col * ALIEN.colSpacing - ALIEN.width / 2;
+      const typeKey = this._pickAlienType();
+      const width = ALIEN_TYPES[typeKey].width;
+      const x = startX + col * ALIEN.colSpacing - width / 2;
       const y = -ALIEN.rowSpacing * (row + 1);
-      this.aliens.push(new Alien(x, y, speed));
+      this.aliens.push(new Alien(x, y, speed, typeKey));
     }
+  }
+
+  // Picks uniformly among alien types unlocked for the current wave
+  // (see minWave in ALIEN_TYPES), so tougher types phase in automatically.
+  _pickAlienType() {
+    const available = Object.keys(ALIEN_TYPES).filter(
+      (key) => this.wave >= ALIEN_TYPES[key].minWave
+    );
+    return available[Math.floor(Math.random() * available.length)];
   }
 
   update(dt) {
@@ -94,19 +105,23 @@ export class Game {
 
   _handleCollisions() {
     for (const bullet of this.bullets) {
+      if (bullet.hit) continue;
       for (const alien of this.aliens) {
+        if (alien.destroyed) continue;
         if (this._isColliding(bullet, alien)) {
           bullet.hit = true;
-          alien.hit = true;
-          this.score += ALIEN.scoreValue;
-          this.explosions.push(
-            new Explosion(alien.x + alien.width / 2, alien.y + alien.height / 2)
-          );
+          if (alien.takeHit()) {
+            this.score += alien.scoreValue;
+            this.explosions.push(
+              new Explosion(alien.x + alien.width / 2, alien.y + alien.height / 2)
+            );
+          }
+          break; // a bullet can only hit one alien
         }
       }
     }
     this.bullets = this.bullets.filter((b) => !b.hit);
-    this.aliens = this.aliens.filter((a) => !a.hit);
+    this.aliens = this.aliens.filter((a) => !a.destroyed);
   }
 
   _isColliding(a, b) {

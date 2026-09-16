@@ -1,5 +1,6 @@
 import { PLAYER, CANVAS_WIDTH, CANVAS_HEIGHT, BULLET } from '../config.js';
 import { Bullet } from './bullet.js';
+import { playFireSound } from '../audio.js';
 
 export class Player {
   constructor() {
@@ -33,6 +34,7 @@ export class Player {
     const bulletX = this.x + this.width / 2 - BULLET.width / 2;
     const bulletY = this.y - BULLET.height;
     bullets.push(new Bullet(bulletX, bulletY));
+    playFireSound();
   }
 
   get centerX() {

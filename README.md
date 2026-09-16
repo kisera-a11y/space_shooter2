@@ -26,8 +26,9 @@ js/
   entities/
     player.js          Player ship: movement, firing, cooldown, drawing
     bullet.js           Player projectile
-    alien.js             Alien: downward movement, drawing
+    alien.js             Alien: type-driven stats/shape, hp, downward movement
     explosion.js          Small particle burst shown when an alien is destroyed
+  audio.js              Synthesized sound effects (Web Audio API, no asset files)
   main.js               Bootstraps the canvas, input, game loop (requestAnimationFrame)
 ```
 
@@ -62,9 +63,20 @@ server is recommended.)
   spawns more aliens moving faster.
 - The game ends when you run out of lives; press Space to restart.
 
+### Alien types
+
+Defined in `js/config.js` (`ALIEN_TYPES`) and phased in by wave via each
+type's `minWave`, so adding another type later is just a new config entry:
+
+- **Grunt** (pink hexagon) — the baseline alien, available from wave 1.
+- **Scout** (green diamond) — smaller and faster, from wave 2.
+- **Brute** (purple, larger) — takes 3 hits to destroy and is worth more
+  points, from wave 3. Remaining hits are shown as pips above it and it
+  visibly dims as it takes damage.
+
 ## What's next
 
 This is intentionally a minimal, playable prototype. Natural next steps
-(not yet implemented) include multiple alien types, touch/mouse controls
-(the input layer is already structured to support this), power-ups, and
-sound effects.
+(not yet implemented) include touch-drag movement, power-ups, background
+music, and more alien behaviors (e.g. side-to-side movement or shooting
+back).
