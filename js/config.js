@@ -11,6 +11,7 @@ export const PLAYER = {
   color: '#4fd1ff',
   startLives: 3,
   fireCooldown: 0.25, // seconds between shots
+  respawnDelay: 0.8, // seconds hidden/inactive after losing a life
 };
 
 export const BULLET = {
@@ -18,16 +19,44 @@ export const BULLET = {
   height: 14,
   speed: 480, // pixels per second, upward
   color: '#ffe066',
+  // Fired instead of a normal bullet while the charged-laser power-up is
+  // active: wider, stronger, and pierces through aliens instead of
+  // being destroyed on the first hit.
+  chargedWidth: 10,
+  chargedDamage: 3,
+  chargedColor: '#8be9ff',
 };
 
 export const ALIEN = {
   baseSpeed: 60, // pixels per second, downward
-  speedPerWave: 12, // added to baseSpeed each wave
+  speedPerWave: 8, // added to baseSpeed each wave (slowed ~1/3 from the original 12)
   countBase: 5, // aliens in wave 1
   countPerWave: 2, // additional aliens each wave
   maxCount: 20,
   rowSpacing: 50,
   colSpacing: 55,
+};
+
+// Power-ups drop from destroyed aliens and fall straight down; the player
+// collects one by touching it with the ship. Each type is self-contained
+// (color/weight/effect data) like ALIEN_TYPES, so adding another later is
+// just a new entry plus a case in Game._applyPowerUp.
+export const POWERUP = {
+  dropChance: 0.15, // chance an alien kill drops a power-up
+  fallSpeed: 90,
+  width: 22,
+  height: 22,
+  types: {
+    laser: {
+      color: '#8be9ff',
+      weight: 3, // relative pick weight — more common than an extra life
+      duration: 8, // seconds the charged laser stays active once collected
+    },
+    life: {
+      color: '#ff6b6b',
+      weight: 1,
+    },
+  },
 };
 
 // Each alien type is self-contained (size/color/toughness/value/speed) so

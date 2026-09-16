@@ -24,10 +24,11 @@ js/
   game.js              Game state machine (start / playing / game over), spawning,
                         collisions, wave/difficulty progression, HUD and screens
   entities/
-    player.js          Player ship: movement, firing, cooldown, drawing
-    bullet.js           Player projectile
+    player.js          Player ship: movement, firing, cooldown, respawn, drawing
+    bullet.js           Player projectile (normal or charged-laser variant)
     alien.js             Alien: type-driven stats/shape, hp, downward movement
-    explosion.js          Small particle burst shown when an alien is destroyed
+    powerup.js            Falling pickup (charged laser / extra life)
+    explosion.js          Configurable particle burst (alien kill, ship loss, pickup)
   audio.js              Synthesized sound effects (Web Audio API, no asset files)
   main.js               Bootstraps the canvas, input, game loop (requestAnimationFrame)
 ```
@@ -74,9 +75,25 @@ type's `minWave`, so adding another type later is just a new config entry:
   points, from wave 3. Remaining hits are shown as pips above it and it
   visibly dims as it takes damage.
 
+### Power-ups
+
+Destroyed aliens have a chance (`POWERUP.dropChance` in `config.js`) to
+drop a falling pickup; touch it with the ship to collect:
+
+- **Charged laser** (cyan bolt) — for a few seconds, shots are wider,
+  pierce through aliens instead of stopping at the first one, and deal
+  enough damage to one-shot any current alien type. The ship glows while
+  it's active, and the HUD shows the time remaining.
+- **Extra life** (red plus) — an immediate `+1` life.
+
+### Losing a life
+
+When an alien reaches the bottom, the ship plays a brief explosion
+effect, disappears for a moment, then reappears re-centered at the
+bottom before play continues.
+
 ## What's next
 
 This is intentionally a minimal, playable prototype. Natural next steps
-(not yet implemented) include touch-drag movement, power-ups, background
-music, and more alien behaviors (e.g. side-to-side movement or shooting
-back).
+(not yet implemented) include touch-drag movement, background music, and
+more alien behaviors (e.g. side-to-side movement or shooting back).

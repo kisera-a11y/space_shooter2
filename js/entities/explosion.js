@@ -1,12 +1,18 @@
-// Small particle-burst effect shown when an alien is destroyed.
+// Small particle-burst effect, reused for alien kills, the ship exploding,
+// and power-up pickups — callers just pass different sizing/color options.
 export class Explosion {
-  constructor(x, y) {
+  constructor(x, y, options = {}) {
     this.x = x;
     this.y = y;
     this.age = 0;
-    this.duration = 0.35;
-    this.particles = Array.from({ length: 8 }, (_, i) => {
-      const angle = (Math.PI * 2 * i) / 8;
+    this.duration = options.duration ?? 0.35;
+    this.minRadius = options.minRadius ?? 4;
+    this.maxRadius = options.maxRadius ?? 22;
+    this.color = options.color ?? '#ffb347';
+
+    const particleCount = options.particleCount ?? 8;
+    this.particles = Array.from({ length: particleCount }, (_, i) => {
+      const angle = (Math.PI * 2 * i) / particleCount;
       return {
         dx: Math.cos(angle),
         dy: Math.sin(angle),
@@ -24,12 +30,12 @@ export class Explosion {
 
   draw(ctx) {
     const progress = this.age / this.duration;
-    const radius = 4 + progress * 18;
+    const radius = this.minRadius + progress * (this.maxRadius - this.minRadius);
     const alpha = 1 - progress;
 
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = '#ffb347';
+    ctx.fillStyle = this.color;
     for (const p of this.particles) {
       const px = this.x + p.dx * radius;
       const py = this.y + p.dy * radius;

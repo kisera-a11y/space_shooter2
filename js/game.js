@@ -1,7 +1,8 @@
-import { CANVAS_WIDTH, CANVAS_HEIGHT, ALIEN, ALIEN_TYPES, PLAYER, STATE } from './config.js';
+import { CANVAS_WIDTH, CANVAS_HEIGHT, ALIEN, ALIEN_TYPES, PLAYER, POWERUP, STATE } from './config.js';
 import { Player } from './entities/player.js';
 import { Alien } from './entities/alien.js';
 import { Explosion } from './entities/explosion.js';
+import { PowerUp } from './entities/powerup.js';
 import { Starfield } from './starfield.js';
 
 export class Game {
@@ -18,6 +19,7 @@ export class Game {
     this.bullets = [];
     this.aliens = [];
     this.explosions = [];
+    this.powerups = [];
     this.score = 0;
     this.lives = PLAYER.startLives;
     this.wave = 1;
@@ -59,6 +61,19 @@ export class Game {
     return available[Math.floor(Math.random() * available.length)];
   }
 
+  // Weighted pick across POWERUP.types (see config.js) — laser is common,
+  // extra life is rarer.
+  _pickPowerUpType() {
+    const entries = Object.entries(POWERUP.types);
+    const totalWeight = entries.reduce((sum, [, type]) => sum + type.weight, 0);
+    let roll = Math.random() * totalWeight;
+    for (const [key, type] of entries) {
+      if (roll < type.weight) return key;
+      roll -= type.weight;
+    }
+    return entries[0][0];
+  }
+
   update(dt) {
     this.starfield.update(dt);
 
@@ -87,10 +102,19 @@ export class Game {
 
     for (const alien of this.aliens) alien.update(dt);
 
+    for (const powerup of this.powerups) powerup.update(dt);
+
     for (const explosion of this.explosions) explosion.update(dt);
     this.explosions = this.explosions.filter((e) => !e.isDone());
 
     this._handleCollisions();
+
+    // Ship is hidden/inactive while its destruction plays out, so it
+    // can't collect anything during that window.
+    if (this.player.respawnTimer <= 0) {
+      this._handlePowerupCollisions();
+    }
+    this.powerups = this.powerups.filter((p) => !p.collected && !p.isOffscreen());
 
     const reachedBottom = this.aliens.some((a) => a.hasReachedBottom());
     if (reachedBottom) {
@@ -109,19 +133,49 @@ export class Game {
       for (const alien of this.aliens) {
         if (alien.destroyed) continue;
         if (this._isColliding(bullet, alien)) {
-          bullet.hit = true;
-          if (alien.takeHit()) {
+          if (!bullet.pierce) bullet.hit = true;
+          if (alien.takeHit(bullet.damage)) {
             this.score += alien.scoreValue;
-            this.explosions.push(
-              new Explosion(alien.x + alien.width / 2, alien.y + alien.height / 2)
-            );
+            const cx = alien.x + alien.width / 2;
+            const cy = alien.y + alien.height / 2;
+            this.explosions.push(new Explosion(cx, cy));
+            if (Math.random() < POWERUP.dropChance) {
+              this.powerups.push(new PowerUp(cx, cy, this._pickPowerUpType()));
+            }
           }
-          break; // a bullet can only hit one alien
+          if (!bullet.pierce) break; // a normal bullet can only hit one alien
         }
       }
     }
     this.bullets = this.bullets.filter((b) => !b.hit);
     this.aliens = this.aliens.filter((a) => !a.destroyed);
+  }
+
+  _handlePowerupCollisions() {
+    for (const powerup of this.powerups) {
+      if (powerup.collected) continue;
+      if (this._isColliding(this.player, powerup)) {
+        powerup.collected = true;
+        this._applyPowerUp(powerup);
+      }
+    }
+  }
+
+  _applyPowerUp(powerup) {
+    if (powerup.type === 'life') {
+      this.lives += 1;
+    } else if (powerup.type === 'laser') {
+      this.player.activateChargedLaser(POWERUP.types.laser.duration);
+    }
+
+    this.explosions.push(
+      new Explosion(powerup.x + powerup.width / 2, powerup.y + powerup.height / 2, {
+        duration: 0.25,
+        maxRadius: 14,
+        particleCount: 6,
+        color: POWERUP.types[powerup.type].color,
+      })
+    );
   }
 
   _isColliding(a, b) {
@@ -137,10 +191,22 @@ export class Game {
     this.lives -= 1;
     this.aliens = [];
     this.bullets = [];
+    this.powerups = [];
+
+    this.explosions.push(
+      new Explosion(this.player.centerX, this.player.centerY, {
+        duration: 0.6,
+        minRadius: 6,
+        maxRadius: 40,
+        particleCount: 14,
+        color: '#4fd1ff',
+      })
+    );
 
     if (this.lives <= 0) {
       this.state = STATE.GAME_OVER;
     } else {
+      this.player.respawn();
       this._spawnWave();
     }
   }
@@ -158,6 +224,7 @@ export class Game {
     this.player.draw(ctx);
     for (const bullet of this.bullets) bullet.draw(ctx);
     for (const alien of this.aliens) alien.draw(ctx);
+    for (const powerup of this.powerups) powerup.draw(ctx);
     for (const explosion of this.explosions) explosion.draw(ctx);
 
     this._drawHud();
@@ -174,6 +241,11 @@ export class Game {
     ctx.textAlign = 'left';
     ctx.fillText(`Score: ${this.score}`, 16, 28);
     ctx.fillText(`Wave: ${this.wave}`, 16, 52);
+
+    if (this.player.chargedLaserTimeRemaining > 0) {
+      ctx.fillStyle = '#8be9ff';
+      ctx.fillText(`Laser: ${this.player.chargedLaserTimeRemaining.toFixed(1)}s`, 16, 76);
+    }
 
     ctx.textAlign = 'right';
     ctx.fillText(`Lives: ${'▲'.repeat(Math.max(this.lives, 0))}`, CANVAS_WIDTH - 16, 28);

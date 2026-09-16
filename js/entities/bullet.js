@@ -1,11 +1,14 @@
 import { BULLET } from '../config.js';
 
 export class Bullet {
-  constructor(x, y) {
+  constructor(x, y, options = {}) {
     this.x = x;
     this.y = y;
-    this.width = BULLET.width;
+    this.width = options.width ?? BULLET.width;
     this.height = BULLET.height;
+    this.damage = options.damage ?? 1;
+    this.pierce = options.pierce ?? false;
+    this.color = options.color ?? BULLET.color;
   }
 
   update(dt) {
@@ -17,7 +20,7 @@ export class Bullet {
   }
 
   draw(ctx) {
-    ctx.fillStyle = BULLET.color;
+    ctx.fillStyle = this.color;
     ctx.fillRect(this.x, this.y, this.width, this.height);
   }
 }

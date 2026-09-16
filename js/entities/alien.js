@@ -25,8 +25,8 @@ export class Alien {
   }
 
   // Returns true if this hit destroyed the alien.
-  takeHit() {
-    this.hp -= 1;
+  takeHit(damage = 1) {
+    this.hp -= damage;
     if (this.hp <= 0) {
       this.destroyed = true;
       return true;

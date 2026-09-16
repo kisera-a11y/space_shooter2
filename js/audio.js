@@ -15,23 +15,24 @@ function getContext() {
   return audioCtx;
 }
 
-export function playFireSound() {
+export function playFireSound(charged = false) {
   const ctx = getContext();
   const now = ctx.currentTime;
 
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
+  const duration = charged ? 0.2 : 0.12;
 
-  osc.type = 'square';
-  osc.frequency.setValueAtTime(880, now);
-  osc.frequency.exponentialRampToValueAtTime(220, now + 0.1);
+  osc.type = charged ? 'sawtooth' : 'square';
+  osc.frequency.setValueAtTime(charged ? 520 : 880, now);
+  osc.frequency.exponentialRampToValueAtTime(charged ? 140 : 220, now + duration - 0.02);
 
-  gain.gain.setValueAtTime(0.15, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+  gain.gain.setValueAtTime(charged ? 0.18 : 0.15, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
   osc.connect(gain);
   gain.connect(ctx.destination);
 
   osc.start(now);
-  osc.stop(now + 0.12);
+  osc.stop(now + duration);
 }
