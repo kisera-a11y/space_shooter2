@@ -36,6 +36,7 @@ export class Boss {
 
     // Descends into place, invulnerable, before patrolling/firing begins.
     this.state = 'entering';
+    this.deathTimer = 0; // seconds spent in the 'dying' state, drives the flicker
   }
 
   get centerX() {
@@ -53,6 +54,14 @@ export class Boss {
         this.y = BOSS.entryY;
         this.state = 'active';
       }
+      return;
+    }
+
+    // Frozen in place while its death sequence plays out (see
+    // Game._startBossDeathSequence()) — only draw() reacts to this state,
+    // ticking deathTimer for the flicker effect.
+    if (this.state === 'dying') {
+      this.deathTimer += dt;
       return;
     }
 
@@ -102,19 +111,29 @@ export class Boss {
     playEnemyFireSound();
   }
 
-  // Invulnerable while still entering. Returns true if this hit destroyed it.
+  // Invulnerable while still entering (or already dying). Returns true
+  // exactly once — the frame the kill shot lands — so Game can kick off
+  // the death sequence instead of removing the boss on the spot.
   takeHit(damage = 1) {
     if (this.state !== 'active') return false;
     this.hp -= damage;
     if (this.hp <= 0) {
       this.hp = 0;
       this.destroyed = true;
+      this.state = 'dying';
       return true;
     }
     return false;
   }
 
   draw(ctx) {
+    ctx.save();
+    if (this.state === 'dying') {
+      // Rapid flicker while the death sequence's explosions play, rather
+      // than just sitting there solid until it's yanked off screen.
+      ctx.globalAlpha = Math.sin(this.deathTimer * 30) > 0 ? 0.9 : 0.35;
+    }
+
     if (this.shape === 'saucer') this._drawSaucer(ctx);
     else if (this.shape === 'carrier') this._drawCarrier(ctx);
     else if (this.shape === 'spider') this._drawSpider(ctx);
@@ -122,7 +141,11 @@ export class Boss {
     else if (this.shape === 'juggernaut') this._drawJuggernaut(ctx);
     else this._drawHex(ctx);
 
-    this._drawHealthBar(ctx);
+    ctx.restore();
+
+    if (this.state !== 'dying') {
+      this._drawHealthBar(ctx);
+    }
   }
 
   _drawHex(ctx) {

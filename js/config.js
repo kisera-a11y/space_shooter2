@@ -112,6 +112,24 @@ export const WAVE_TRANSITION = {
   labelDuration: 0.5, // seconds the "WAVE n" text is shown
 };
 
+// A multi-burst death sequence played when a boss is destroyed, instead
+// of it just vanishing: it freezes and flickers in place while staggered
+// small explosions burst across its body, capped by one big finale, with
+// a screen shake for impact. See Game._startBossDeathSequence(). The
+// final boss gets a longer, bigger version of the same sequence.
+export const BOSS_DEATH = {
+  burstCount: 5,
+  finalBurstCount: 9,
+  burstMinGap: 0.08, // seconds between staggered small bursts
+  burstMaxGap: 0.22,
+  finaleDelay: 0.25, // gap between the last small burst and the big finale
+  postFinaleGrace: 0.4, // how long the finale lingers before the boss actually clears
+  screenShakeDuration: 0.6,
+  screenShakeMagnitude: 8,
+  finalScreenShakeDuration: 1,
+  finalScreenShakeMagnitude: 16,
+};
+
 // A one-time, tougher-than-normal encounter that replaces the regular
 // boss on this specific boss encounter number (5th boss == wave 15 at
 // the default everyNWaves of 3). Unlike a regular Boss it can lunge down

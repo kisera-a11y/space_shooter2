@@ -193,6 +193,14 @@ instead of normal aliens:
   a 3-way spread shot instead of one bullet, and the gunship fires two
   parallel shots at once from offset barrels. The original four still
   fire a single shot straight down.
+- Defeating a boss plays a multi-burst death sequence (`BOSS_DEATH` in
+  `config.js`) instead of it just vanishing: it freezes in place and
+  flickers while a staggered series of small explosions bursts across
+  its body, capped by one bigger finale explosion, with a screen shake
+  for impact. It's briefly invulnerable and harmless to touch during
+  this — the wave only actually advances once the whole sequence
+  finishes. The final boss gets a longer, bigger version of the same
+  sequence.
 
 ### Final boss (and endless play beyond it)
 

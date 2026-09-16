@@ -42,8 +42,10 @@ export class FinalBoss extends Boss {
   }
 
   update(dt, enemyBullets) {
-    if (this.state === 'entering') {
-      super.update(dt, enemyBullets); // reuse the base descend-into-place logic
+    if (this.state === 'entering' || this.state === 'dying') {
+      // Base Boss.update() handles both: descending into place, or
+      // freezing/ticking deathTimer while the death sequence plays.
+      super.update(dt, enemyBullets);
       return;
     }
 
@@ -127,6 +129,11 @@ export class FinalBoss extends Boss {
   draw(ctx) {
     const { x, y, width: w, height: h } = this;
 
+    ctx.save();
+    if (this.state === 'dying') {
+      ctx.globalAlpha = Math.sin(this.deathTimer * 30) > 0 ? 0.9 : 0.35;
+    }
+
     ctx.fillStyle = this.color;
     ctx.beginPath();
     ctx.moveTo(x + w * 0.05, y + h * 0.2);
@@ -153,6 +160,10 @@ export class FinalBoss extends Boss {
       ctx.fill();
     }
 
-    this._drawHealthBar(ctx);
+    ctx.restore();
+
+    if (this.state !== 'dying') {
+      this._drawHealthBar(ctx);
+    }
   }
 }

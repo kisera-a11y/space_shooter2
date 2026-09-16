@@ -1,4 +1,4 @@
-import { CANVAS_WIDTH, CANVAS_HEIGHT, ALIEN, ALIEN_TYPES, METEOR, PLAYER, POWERUP, BOSS, FINAL_BOSS, WAVE_TRANSITION, STATE, WEAPON_LEVELS } from './config.js';
+import { CANVAS_WIDTH, CANVAS_HEIGHT, ALIEN, ALIEN_TYPES, METEOR, PLAYER, POWERUP, BOSS, BOSS_DEATH, FINAL_BOSS, WAVE_TRANSITION, STATE, WEAPON_LEVELS } from './config.js';
 import { Player } from './entities/player.js';
 import { Alien } from './entities/alien.js';
 import { Meteor } from './entities/meteor.js';
@@ -42,6 +42,13 @@ export class Game {
     this.levelUpLabelTimer = 0;
     this.levelDownLabelTimer = 0;
     this.milestoneLabelTimer = 0;
+    this.bossDeathActive = false;
+    this.bossDeathQueue = [];
+    this.bossDeathElapsed = 0;
+    this.bossDeathFinalDelay = 0;
+    this.screenShakeTimer = 0;
+    this.screenShakeDuration = 0;
+    this.screenShakeMagnitude = 0;
     this.score = 0;
     this.lives = PLAYER.startLives;
     this.wave = 1;
@@ -203,6 +210,12 @@ export class Game {
     if (this.milestoneLabelTimer > 0) {
       this.milestoneLabelTimer = Math.max(0, this.milestoneLabelTimer - dt);
     }
+    if (this.screenShakeTimer > 0) {
+      this.screenShakeTimer = Math.max(0, this.screenShakeTimer - dt);
+    }
+    if (this.bossDeathActive) {
+      this._updateBossDeathSequence(dt);
+    }
 
     this.player.update(dt, this.input, this.bullets);
 
@@ -236,7 +249,8 @@ export class Game {
 
       const collidedAlien = this.aliens.find((a) => this._isColliding(this.player, a));
       const collidedEnemyBullet = this.enemyBullets.find((b) => this._isColliding(this.player, b));
-      const collidedBoss = this.boss && this._isColliding(this.player, this.boss);
+      const collidedBoss =
+        this.boss && this.boss.state !== 'dying' && this._isColliding(this.player, this.boss);
       const collidedMeteor = this.meteors.find((m) => this._isColliding(this.player, m));
       if (collidedAlien || collidedEnemyBullet || collidedBoss || collidedMeteor) {
         if (collidedEnemyBullet) collidedEnemyBullet.hit = true;
@@ -284,23 +298,9 @@ export class Game {
       if (this.boss && !bullet.hit && this._isColliding(bullet, this.boss)) {
         if (!bullet.pierce) bullet.hit = true;
         if (this.boss.takeHit(bullet.damage)) {
-          const isFinalBoss = this.boss instanceof FinalBoss;
           this.score += this.boss.scoreValue;
           if (this.player.addXp(this.boss.xpValue)) this._showLevelUp();
-          this.explosions.push(
-            new Explosion(this.boss.centerX, this.boss.centerY, {
-              duration: isFinalBoss ? 1.5 : 1,
-              minRadius: 10,
-              maxRadius: isFinalBoss ? 140 : 90,
-              particleCount: isFinalBoss ? 36 : 24,
-              color: '#ffb347',
-            })
-          );
-          this.boss = null;
-          if (isFinalBoss) {
-            this.milestoneLabelTimer = 3;
-            playMilestoneSound();
-          }
+          this._startBossDeathSequence(this.boss);
         }
       }
 
@@ -365,6 +365,73 @@ export class Game {
     playLevelDownSound();
   }
 
+  // Kicks off a multi-burst death sequence (BOSS_DEATH in config.js)
+  // instead of the boss just vanishing on the kill shot. The boss freezes
+  // and flickers (Boss.state = 'dying', handled in Boss.update()/draw())
+  // while a staggered series of explosions bursts across its body,
+  // capped by one big finale, with a screen shake for impact. The boss
+  // only actually clears — and the wave only advances — once the whole
+  // sequence finishes (_updateBossDeathSequence).
+  _startBossDeathSequence(boss) {
+    const isFinalBoss = boss instanceof FinalBoss;
+
+    this.bossDeathActive = true;
+    this.bossDeathElapsed = 0;
+    this.bossDeathQueue = [];
+
+    const burstCount = isFinalBoss ? BOSS_DEATH.finalBurstCount : BOSS_DEATH.burstCount;
+    let t = 0;
+    for (let i = 0; i < burstCount; i++) {
+      t += randomBetween(BOSS_DEATH.burstMinGap, BOSS_DEATH.burstMaxGap);
+      this.bossDeathQueue.push({
+        delay: t,
+        x: boss.x + Math.random() * boss.width,
+        y: boss.y + Math.random() * boss.height,
+        big: false,
+      });
+    }
+    t += BOSS_DEATH.finaleDelay;
+    this.bossDeathQueue.push({ delay: t, x: boss.centerX, y: boss.centerY, big: true });
+    this.bossDeathFinalDelay = t + BOSS_DEATH.postFinaleGrace;
+
+    this.screenShakeDuration = isFinalBoss
+      ? BOSS_DEATH.finalScreenShakeDuration
+      : BOSS_DEATH.screenShakeDuration;
+    this.screenShakeTimer = this.screenShakeDuration;
+    this.screenShakeMagnitude = isFinalBoss
+      ? BOSS_DEATH.finalScreenShakeMagnitude
+      : BOSS_DEATH.screenShakeMagnitude;
+  }
+
+  _updateBossDeathSequence(dt) {
+    this.bossDeathElapsed += dt;
+
+    while (this.bossDeathQueue.length && this.bossDeathQueue[0].delay <= this.bossDeathElapsed) {
+      const burst = this.bossDeathQueue.shift();
+      const isFinalBoss = this.boss instanceof FinalBoss;
+      this.explosions.push(
+        new Explosion(burst.x, burst.y, {
+          duration: burst.big ? (isFinalBoss ? 1.6 : 1.1) : 0.35,
+          minRadius: burst.big ? 14 : 4,
+          maxRadius: burst.big ? (isFinalBoss ? 150 : 100) : 16 + Math.random() * 14,
+          particleCount: burst.big ? (isFinalBoss ? 40 : 26) : 10,
+          color: burst.big || Math.random() < 0.5 ? '#ffb347' : '#ffe066',
+        })
+      );
+      playExplosionSound();
+    }
+
+    if (this.bossDeathElapsed >= this.bossDeathFinalDelay) {
+      const isFinalBoss = this.boss instanceof FinalBoss;
+      this.bossDeathActive = false;
+      this.boss = null;
+      if (isFinalBoss) {
+        this.milestoneLabelTimer = 3;
+        playMilestoneSound();
+      }
+    }
+  }
+
   _isColliding(a, b) {
     return (
       a.x < b.x + b.width &&
@@ -421,9 +488,16 @@ export class Game {
   draw() {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    // Screen shake (during a boss death sequence) only jostles the game
+    // world, never the HUD/overlays drawn after restore() below, so text
+    // stays legible.
+    ctx.save();
+    this._applyScreenShake(ctx);
     this.starfield.draw(ctx);
 
     if (this.state === STATE.START) {
+      ctx.restore();
       this._drawStartScreen();
       return;
     }
@@ -436,6 +510,7 @@ export class Game {
     for (const bullet of this.enemyBullets) bullet.draw(ctx);
     for (const powerup of this.powerups) powerup.draw(ctx);
     for (const explosion of this.explosions) explosion.draw(ctx);
+    ctx.restore();
 
     this._drawHud();
     // Transient labels only make sense mid-run — suppressing them once the
@@ -454,6 +529,13 @@ export class Game {
     } else if (this.state === STATE.PAUSED) {
       this._drawPauseScreen();
     }
+  }
+
+  _applyScreenShake(ctx) {
+    if (this.screenShakeTimer <= 0) return;
+    // Tapers off as the timer runs down rather than cutting off abruptly.
+    const magnitude = this.screenShakeMagnitude * (this.screenShakeTimer / this.screenShakeDuration);
+    ctx.translate((Math.random() * 2 - 1) * magnitude, (Math.random() * 2 - 1) * magnitude);
   }
 
   _drawMilestoneLabel() {
