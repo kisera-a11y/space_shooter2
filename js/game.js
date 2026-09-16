@@ -8,6 +8,7 @@ import { Boss } from './entities/boss.js';
 import { FinalBoss } from './entities/finalBoss.js';
 import { Starfield } from './starfield.js';
 import { playExplosionSound, startBackgroundMusic, stopBackgroundMusic, playLevelUpSound } from './audio.js';
+import { getHighScores, recordScore } from './highscores.js';
 
 function randomBetween(min, max) {
   return min + Math.random() * (max - min);
@@ -32,7 +33,6 @@ export class Game {
     this.enemyBullets = [];
     this.boss = null;
     this.isBossWave = false;
-    this.defeatedFinalBoss = false;
     this.aliensToSpawn = 0;
     this.currentWaveSpeed = 0;
     this.alienSpawnCooldown = 0;
@@ -40,9 +40,13 @@ export class Game {
     this.waveTransitionTimer = 0;
     this.waveLabelTimer = 0;
     this.levelUpLabelTimer = 0;
+    this.milestoneLabelTimer = 0;
     this.score = 0;
     this.lives = PLAYER.startLives;
     this.wave = 1;
+    this.lastRunRank = null;
+    this.lastRunMadeTopList = false;
+    this.lastRunTopScores = [];
   }
 
   startGame() {
@@ -146,7 +150,7 @@ export class Game {
       return;
     }
 
-    if (this.state === STATE.GAME_OVER || this.state === STATE.VICTORY) {
+    if (this.state === STATE.GAME_OVER) {
       if (this.input.consumeFirePressed()) {
         this.startGame();
       }
@@ -165,6 +169,9 @@ export class Game {
     }
     if (this.levelUpLabelTimer > 0) {
       this.levelUpLabelTimer = Math.max(0, this.levelUpLabelTimer - dt);
+    }
+    if (this.milestoneLabelTimer > 0) {
+      this.milestoneLabelTimer = Math.max(0, this.milestoneLabelTimer - dt);
     }
 
     this.player.update(dt, this.input, this.bullets);
@@ -218,13 +225,8 @@ export class Game {
       ? this.boss === null
       : this.aliensToSpawn <= 0 && this.aliens.length === 0;
     if (waveCleared && this.state === STATE.PLAYING) {
-      if (this.defeatedFinalBoss) {
-        this.state = STATE.VICTORY;
-        stopBackgroundMusic();
-      } else {
-        this.wave += 1;
-        this._spawnWave();
-      }
+      this.wave += 1;
+      this._spawnWave();
     }
   }
 
@@ -265,7 +267,10 @@ export class Game {
             })
           );
           this.boss = null;
-          if (isFinalBoss) this.defeatedFinalBoss = true;
+          if (isFinalBoss) {
+            this.milestoneLabelTimer = 3;
+            playLevelUpSound();
+          }
         }
       }
 
@@ -348,6 +353,10 @@ export class Game {
     if (this.lives <= 0) {
       this.state = STATE.GAME_OVER;
       stopBackgroundMusic();
+      const result = recordScore(this.score, this.wave);
+      this.lastRunRank = result.rank;
+      this.lastRunMadeTopList = result.madeTopList;
+      this.lastRunTopScores = result.topScores;
     } else {
       this.player.respawn();
       // A boss fight in progress just keeps its hp — only a regular wave
@@ -378,14 +387,31 @@ export class Game {
     for (const explosion of this.explosions) explosion.draw(ctx);
 
     this._drawHud();
-    this._drawWaveLabel();
-    this._drawLevelUpLabel();
+    // Transient labels only make sense mid-run — suppressing them once the
+    // game is over avoids one ghosting faintly through that screen's
+    // semi-transparent overlay if death happens while one is still showing.
+    if (this.state === STATE.PLAYING) {
+      this._drawWaveLabel();
+      this._drawLevelUpLabel();
+      this._drawMilestoneLabel();
+    }
 
     if (this.state === STATE.GAME_OVER) {
       this._drawGameOverScreen();
-    } else if (this.state === STATE.VICTORY) {
-      this._drawVictoryScreen();
     }
+  }
+
+  _drawMilestoneLabel() {
+    if (this.milestoneLabelTimer <= 0) return;
+    const ctx = this.ctx;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#7cfc9a';
+    ctx.font = 'bold 34px "Courier New", monospace';
+    ctx.fillText('FINAL BOSS DEFEATED!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 60);
+    ctx.font = 'bold 18px "Courier New", monospace';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('The battle continues...', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 92);
+    ctx.textAlign = 'left';
   }
 
   _drawWaveLabel() {
@@ -443,53 +469,59 @@ export class Game {
     ctx.fillText('Shoot: SPACE or ● (hold for rapid fire)', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 12);
     ctx.fillText('Shoot aliens, dodge the meteors!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 44);
 
+    const bestScore = getHighScores()[0]?.score;
+    if (bestScore) {
+      ctx.fillStyle = '#8be9ff';
+      ctx.font = 'bold 18px "Courier New", monospace';
+      ctx.fillText(`Best Score: ${bestScore}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 78);
+    }
+
     ctx.fillStyle = '#ffe066';
     ctx.font = 'bold 24px "Courier New", monospace';
-    ctx.fillText('Press SPACE to Start', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 110);
+    ctx.fillText('Press SPACE to Start', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 118);
 
     ctx.textAlign = 'left';
   }
 
   _drawGameOverScreen() {
     const ctx = this.ctx;
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ff5c8a';
-    ctx.font = 'bold 48px "Courier New", monospace';
-    ctx.fillText('GAME OVER', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 60);
+    ctx.font = 'bold 40px "Courier New", monospace';
+    ctx.fillText('GAME OVER', CANVAS_WIDTH / 2, 110);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = '22px "Courier New", monospace';
-    ctx.fillText(`Final Score: ${this.score}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 10);
-    ctx.fillText(`Wave Reached: ${this.wave}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 22);
+    ctx.font = '20px "Courier New", monospace';
+    ctx.fillText(`Final Score: ${this.score}`, CANVAS_WIDTH / 2, 150);
+    ctx.fillText(`Wave Reached: ${this.wave}`, CANVAS_WIDTH / 2, 174);
+
+    ctx.fillStyle = '#8be9ff';
+    ctx.font = 'bold 18px "Courier New", monospace';
+    if (this.lastRunMadeTopList) {
+      ctx.fillText(`New Top ${this.lastRunTopScores.length}! Rank #${this.lastRunRank}`, CANVAS_WIDTH / 2, 206);
+    } else {
+      const cutoff = this.lastRunTopScores[this.lastRunTopScores.length - 1]?.score ?? 0;
+      ctx.fillText(`Score ${cutoff}+ needed for the Top 10`, CANVAS_WIDTH / 2, 206);
+    }
 
     ctx.fillStyle = '#ffe066';
-    ctx.font = 'bold 22px "Courier New", monospace';
-    ctx.fillText('Press SPACE to Restart', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 80);
+    ctx.font = 'bold 16px "Courier New", monospace';
+    ctx.fillText('— TOP SCORES —', CANVAS_WIDTH / 2, 240);
 
-    ctx.textAlign = 'left';
-  }
-
-  _drawVictoryScreen() {
-    const ctx = this.ctx;
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#7cfc9a';
-    ctx.font = 'bold 48px "Courier New", monospace';
-    ctx.fillText('VICTORY!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 60);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '22px "Courier New", monospace';
-    ctx.fillText('You defeated the final boss!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
-    ctx.fillText(`Final Score: ${this.score}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 12);
+    ctx.font = '16px "Courier New", monospace';
+    const rowsToShow = Math.min(5, this.lastRunTopScores.length);
+    for (let i = 0; i < rowsToShow; i++) {
+      const entry = this.lastRunTopScores[i];
+      ctx.fillStyle = i + 1 === this.lastRunRank ? '#7cfc9a' : '#ffffff';
+      ctx.fillText(`#${i + 1}  ${entry.score} pts — Wave ${entry.wave}`, CANVAS_WIDTH / 2, 264 + i * 20);
+    }
 
     ctx.fillStyle = '#ffe066';
-    ctx.font = 'bold 22px "Courier New", monospace';
-    ctx.fillText('Press SPACE to Play Again', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 80);
+    ctx.font = 'bold 20px "Courier New", monospace';
+    ctx.fillText('Press SPACE to Restart', CANVAS_WIDTH / 2, 264 + rowsToShow * 20 + 30);
 
     ctx.textAlign = 'left';
   }

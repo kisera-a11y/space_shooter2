@@ -108,7 +108,9 @@ export const WAVE_TRANSITION = {
 // boss on this specific boss encounter number (5th boss == wave 15 at
 // the default everyNWaves of 3). Unlike a regular Boss it can lunge down
 // toward the player (and back) and alternates between several attack
-// patterns — see entities/finalBoss.js.
+// patterns — see entities/finalBoss.js. The game doesn't end when it's
+// defeated — waves keep going indefinitely afterward, with the regular
+// boss rotation continuing to scale up in hp/speed/fire-rate forever.
 export const FINAL_BOSS = {
   bossNumber: 5,
   widthRatio: 0.4,
@@ -216,5 +218,4 @@ export const STATE = {
   START: 'start',
   PLAYING: 'playing',
   GAME_OVER: 'game_over',
-  VICTORY: 'victory',
 };

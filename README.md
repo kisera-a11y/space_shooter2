@@ -2,7 +2,8 @@
 
 A small 2D arcade-style space shooter prototype. Move your ship along the
 bottom of the screen, shoot down descending aliens, and survive as long as
-you can as waves get progressively harder.
+you can — the game runs endlessly, with waves and bosses getting harder
+forever, so the real goal is to climb the local high-score table.
 
 ## Technology
 
@@ -38,6 +39,7 @@ js/
     explosion.js          Configurable particle burst (alien kill, ship loss, pickup)
   audio.js              Synthesized sound effects + 8-bit chiptune loop (Web Audio
                         API, no asset files)
+  highscores.js          Local top-10 table persisted via localStorage
   main.js               Bootstraps the canvas, input, game loop (requestAnimationFrame)
 ```
 
@@ -146,10 +148,10 @@ instead of normal aliens:
   `config.js`): a hex-shaped ship, a saucer, a blocky carrier, and a
   spider-legged variant, repeating from there.
 
-### Final boss
+### Final boss (and endless play beyond it)
 
 The 5th boss encounter (wave 15 by default, `FINAL_BOSS.bossNumber`) is
-a unique, tougher capstone fight instead of the regular rotation:
+a unique, tougher one-off fight instead of the regular rotation:
 
 - Alongside its left/right patrol, it periodically charges down toward
   the player, holds briefly, then retreats back up — it isn't limited to
@@ -157,8 +159,13 @@ a unique, tougher capstone fight instead of the regular rotation:
   hit the ship if you don't dodge out of its path.
 - It cycles between three attack patterns: a single shot, a 3-way spread,
   and a 2-bullet burst.
-- Defeating it ends the run with a victory screen instead of continuing
-  to another wave.
+
+Defeating it doesn't end the run — it shows a "FINAL BOSS DEFEATED!"
+flash and play just continues. The wave/boss cycle repeats indefinitely
+after that (the 6th, 7th, ... boss encounters are back to the regular
+rotation), with alien speed and boss hp/speed/fire-rate scaling up every
+single stage with no cap, so the game keeps getting harder for as long
+as you can survive.
 
 ### XP and weapon levels
 
@@ -179,6 +186,16 @@ Leveling up shows a "LEVEL UP!" banner with a sound and updates the HUD
 whatever tier you're on with its own wide piercing shot for its
 duration — the weapon level is the permanent baseline, the power-up is a
 temporary boost on top of it.
+
+### High scores
+
+Since the game never ends on its own, `js/highscores.js` keeps a local
+top-10 table (score + wave reached) in the browser's `localStorage` —
+per-device/per-browser, not a shared online leaderboard. On game over,
+the run is recorded and the screen shows where it ranked (or what score
+would be needed to make the top 10) alongside the table itself, with the
+just-played run highlighted. The start screen also teases the current
+best score.
 
 ### Sound
 
