@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Star Defender</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="game-wrapper">
+    <canvas id="game-canvas" width="800" height="600"></canvas>
+
+    <!-- Shown only on touch devices (see CSS media query). Buttons are
+         held down like keys: pointerdown/up drive InputHandler's touch
+         state the same way keydown/up drive its keyboard state. -->
+    <div id="touch-controls">
+      <div id="touch-move">
+        <button id="btn-left" class="touch-btn" aria-label="Move left">◀</button>
+        <button id="btn-right" class="touch-btn" aria-label="Move right">▶</button>
+      </div>
+      <button id="btn-fire" class="touch-btn touch-btn-fire" aria-label="Fire">●</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

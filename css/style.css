@@ -1,0 +1,88 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Courier New', Courier, monospace;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+#game-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#game-canvas {
+  background: #05050f;
+  border: 2px solid #3a3a5c;
+  box-shadow: 0 0 24px rgba(80, 120, 255, 0.35);
+  image-rendering: pixelated;
+  max-width: 100vw;
+  max-height: 100vh;
+  touch-action: none;
+}
+
+/* Touch controls: hidden by default, shown only on touch-primary devices
+   (phones/tablets) so keyboard/mouse users never see them. */
+#touch-controls {
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  #touch-controls {
+    display: block;
+    position: absolute;
+    inset: 0;
+    pointer-events: none; /* let taps pass through except on buttons below */
+  }
+}
+
+#touch-move {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  display: flex;
+  gap: 14px;
+}
+
+.touch-btn-fire {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  width: 78px;
+  height: 78px;
+  font-size: 28px;
+  border-color: rgba(255, 224, 102, 0.7);
+  background: rgba(255, 224, 102, 0.15);
+  color: #ffe066;
+}
+
+.touch-btn {
+  pointer-events: auto;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid rgba(79, 209, 255, 0.7);
+  background: rgba(79, 209, 255, 0.15);
+  color: #4fd1ff;
+  font-size: 22px;
+  line-height: 1;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-btn:active {
+  background: rgba(79, 209, 255, 0.4);
+}
