@@ -185,8 +185,14 @@ instead of normal aliens:
 - Losing a life mid-fight doesn't reset the boss's hp — only a regular
   wave respawns a fresh set of aliens after you die.
 - Each encounter cycles through a different look (`BOSS_VARIANTS` in
-  `config.js`): a hex-shaped ship, a saucer, a blocky carrier, and a
-  spider-legged variant, repeating from there.
+  `config.js`): a hex-shaped ship, a saucer, a blocky carrier, a
+  spider-legged variant, a three-barreled turret, and a heavy twin-cannon
+  gunship, repeating from there.
+- Two of those variants fire differently, not just look different
+  (`Boss._fire()` branches on the variant's `pattern`): the turret fans
+  a 3-way spread shot instead of one bullet, and the gunship fires two
+  parallel shots at once from offset barrels. The original four still
+  fire a single shot straight down.
 
 ### Final boss (and endless play beyond it)
 

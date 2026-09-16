@@ -87,13 +87,21 @@ export const BOSS = {
 
 // Regular bosses cycle through these looks (by bossIndex, wrapping around)
 // so each encounter is visually distinct — see Boss.draw()'s per-shape
-// methods in entities/boss.js. The final boss (below) has its own unique
-// look instead of picking from this list.
+// methods in entities/boss.js. `pattern` picks how it fires (Boss._fire()),
+// so a variant can be a genuinely different fight, not just a reskin;
+// omitting it (as the original four do) means the plain single shot
+// straight down. The final boss (below) has its own unique look/attacks
+// instead of picking from this list.
 export const BOSS_VARIANTS = [
-  { shape: 'hex', color: '#ff2e63' },
-  { shape: 'saucer', color: '#7b2ff7' },
-  { shape: 'carrier', color: '#ff8c42' },
-  { shape: 'spider', color: '#2ee6a8' },
+  { shape: 'hex', color: '#ff2e63', pattern: 'single' },
+  { shape: 'saucer', color: '#7b2ff7', pattern: 'single' },
+  { shape: 'carrier', color: '#ff8c42', pattern: 'single' },
+  { shape: 'spider', color: '#2ee6a8', pattern: 'single' },
+  // Three-barreled turret — fans out a 3-way spread instead of one shot.
+  { shape: 'turret', color: '#ffd23f', pattern: 'spread' },
+  // Heavy twin-cannon hull — fires two parallel shots at once from
+  // offset barrels instead of one shot from center.
+  { shape: 'juggernaut', color: '#4d96ff', pattern: 'twin' },
 ];
 
 // Brief pause + on-screen label at the start of every wave (regular or

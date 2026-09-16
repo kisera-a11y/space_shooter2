@@ -1,4 +1,4 @@
-import { BOSS, BOSS_VARIANTS, XP, CANVAS_WIDTH } from '../config.js';
+import { BOSS, BOSS_VARIANTS, XP, CANVAS_WIDTH, ENEMY_BULLET } from '../config.js';
 import { EnemyBullet } from './enemyBullet.js';
 import { playEnemyFireSound } from '../audio.js';
 
@@ -16,6 +16,7 @@ export class Boss {
     const variant = BOSS_VARIANTS[(bossIndex - 1) % BOSS_VARIANTS.length];
     this.shape = variant.shape;
     this.color = variant.color;
+    this.pattern = variant.pattern || 'single';
 
     this.maxHp = BOSS.baseHp + (bossIndex - 1) * BOSS.hpPerBoss;
     this.hp = this.maxHp;
@@ -73,10 +74,31 @@ export class Boss {
     }
   }
 
+  // Branches on `pattern` (see BOSS_VARIANTS in config.js) so a variant's
+  // attack, not just its look, can differ from the plain single shot.
   _fire(enemyBullets) {
-    const bulletX = this.centerX;
     const bulletY = this.y + this.height;
-    enemyBullets.push(new EnemyBullet(bulletX, bulletY));
+
+    if (this.pattern === 'spread') {
+      const angles = [-0.5, 0, 0.5];
+      for (const angle of angles) {
+        enemyBullets.push(
+          new EnemyBullet(
+            this.centerX,
+            bulletY,
+            Math.sin(angle) * ENEMY_BULLET.speed,
+            Math.cos(angle) * ENEMY_BULLET.speed
+          )
+        );
+      }
+    } else if (this.pattern === 'twin') {
+      const offset = this.width * 0.28;
+      enemyBullets.push(new EnemyBullet(this.centerX - offset, bulletY));
+      enemyBullets.push(new EnemyBullet(this.centerX + offset, bulletY));
+    } else {
+      enemyBullets.push(new EnemyBullet(this.centerX, bulletY));
+    }
+
     playEnemyFireSound();
   }
 
@@ -96,6 +118,8 @@ export class Boss {
     if (this.shape === 'saucer') this._drawSaucer(ctx);
     else if (this.shape === 'carrier') this._drawCarrier(ctx);
     else if (this.shape === 'spider') this._drawSpider(ctx);
+    else if (this.shape === 'turret') this._drawTurret(ctx);
+    else if (this.shape === 'juggernaut') this._drawJuggernaut(ctx);
     else this._drawHex(ctx);
 
     this._drawHealthBar(ctx);
@@ -199,6 +223,45 @@ export class Boss {
     ctx.beginPath();
     ctx.arc(cx, cy, bodyR * 0.4, 0, Math.PI * 2);
     ctx.fill();
+  }
+
+  // Squat domed turret with three barrel nubs along the bottom — the
+  // three barrels visually telegraph its 3-way spread shot.
+  _drawTurret(ctx) {
+    const { x, y, width: w, height: h } = this;
+    const cx = x + w / 2;
+    const cy = y + h * 0.42;
+
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, w * 0.46, h * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#3a2b00';
+    ctx.beginPath();
+    ctx.arc(cx, cy, w * 0.15, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = this.color;
+    for (const p of [-0.28, 0, 0.28]) {
+      ctx.fillRect(cx + w * p - w * 0.03, y + h * 0.72, w * 0.06, h * 0.35);
+    }
+  }
+
+  // Boxy heavy hull with two prominent side cannons — the twin barrels
+  // visually telegraph its simultaneous two-shot volley.
+  _drawJuggernaut(ctx) {
+    const { x, y, width: w, height: h } = this;
+
+    ctx.fillStyle = this.color;
+    ctx.fillRect(x + w * 0.2, y, w * 0.6, h * 0.7);
+    ctx.fillRect(x + w * 0.05, y + h * 0.15, w * 0.18, h * 0.5);
+    ctx.fillRect(x + w * 0.77, y + h * 0.15, w * 0.18, h * 0.5);
+    ctx.fillRect(x + w * 0.13, y + h * 0.5, w * 0.09, h * 0.45);
+    ctx.fillRect(x + w * 0.78, y + h * 0.5, w * 0.09, h * 0.45);
+
+    ctx.fillStyle = '#0a1a33';
+    ctx.fillRect(x + w * 0.35, y + h * 0.15, w * 0.3, h * 0.3);
   }
 
   _drawHealthBar(ctx) {
