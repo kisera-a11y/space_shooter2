@@ -55,7 +55,13 @@ export class InputHandler {
   _onKeyDown(e) {
     this.keys.add(e.code);
     if (e.code === 'Space') {
-      this.firePressed = true;
+      // Only a genuine fresh press should count as "confirm" on a menu —
+      // e.repeat is true for the OS's auto-repeat events while the key
+      // stays physically held (e.g. holding Space to fire), and those
+      // must never be mistaken for a new press of a start/restart prompt.
+      if (!e.repeat) {
+        this.firePressed = true;
+      }
       e.preventDefault();
     }
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.code)) {

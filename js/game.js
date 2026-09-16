@@ -352,6 +352,11 @@ export class Game {
 
     if (this.lives <= 0) {
       this.state = STATE.GAME_OVER;
+      // Discard any fire-press left over from holding Space/the fire
+      // button while dying — otherwise that stale signal is immediately
+      // read as "confirm" on the very next frame and skips this screen
+      // straight into a restart.
+      this.input.consumeFirePressed();
       stopBackgroundMusic();
       const result = recordScore(this.score, this.wave);
       this.lastRunRank = result.rank;
