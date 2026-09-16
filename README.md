@@ -108,6 +108,21 @@ each type's `movement` field, and their `draw()` methods use an `age`
 timer (seconds alive) rather than fixed animation frames, so wing-flap/
 leg-swing speed doesn't depend on framerate.
 
+Starting at wave 10, a second wave of aliens phases in that can shoot
+back (`canAttack`/`attackPattern` in `ALIEN_TYPES`, `Alien._fire()` —
+the same pattern-branching approach as `Boss._fire()`), on top of still
+costing a life on contact like every other alien:
+
+- **Sentinel** (purple orb, wave 10+) — three probe arms slowly orbit
+  its body around a pulsing iris. Fires a single shot straight down.
+- **Marksman** (orange, insect-legged, wave 11+) — aims at the player's
+  position at the moment it fires rather than always shooting straight
+  down, so standing still under it is no longer automatically safe. Its
+  eye flashes red right before it fires, giving a fair visual warning.
+- **Vanguard** (blue, armored, wave 13+) — the toughest regular alien
+  attacker at 3 hp (hit-point pips like the Brute's), with two pincers
+  that open and close. Fires a 3-way spread shot.
+
 ### Meteors
 
 Alongside aliens, unkillable rocks (`js/entities/meteor.js`) tumble down

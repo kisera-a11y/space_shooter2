@@ -1,4 +1,6 @@
-import { ALIEN_TYPES, CANVAS_WIDTH, CANVAS_HEIGHT } from '../config.js';
+import { ALIEN_TYPES, CANVAS_WIDTH, CANVAS_HEIGHT, ENEMY_BULLET } from '../config.js';
+import { EnemyBullet } from './enemyBullet.js';
+import { playEnemyFireSound } from '../audio.js';
 
 export class Alien {
   constructor(x, y, speed, typeKey) {
@@ -24,9 +26,16 @@ export class Alien {
     // Drifters start heading either way so a wave of them doesn't all
     // bounce off the walls in lockstep.
     this.driftVx = type.driftSpeed ? type.driftSpeed * (Math.random() < 0.5 ? -1 : 1) : 0;
+
+    this.canAttack = type.canAttack || false;
+    this.attackPattern = type.attackPattern || 'straight';
+    this.fireInterval = type.fireInterval || 0;
+    // Staggered starting cooldown so a wave of the same attacker type
+    // doesn't all fire in lockstep the instant they're eligible.
+    this.fireCooldown = this.canAttack ? Math.random() * this.fireInterval : 0;
   }
 
-  update(dt) {
+  update(dt, enemyBullets, player) {
     this.age += dt;
     this.y += this.speed * dt;
 
@@ -43,6 +52,40 @@ export class Alien {
         this.driftVx = -Math.abs(this.driftVx);
       }
     }
+
+    if (this.canAttack && enemyBullets) {
+      this.fireCooldown -= dt;
+      if (this.fireCooldown <= 0) {
+        this._fire(enemyBullets, player);
+        this.fireCooldown = this.fireInterval;
+      }
+    }
+  }
+
+  // Branches on attackPattern (see ALIEN_TYPES in config.js) the same
+  // way Boss._fire() branches on a boss variant's pattern.
+  _fire(enemyBullets, player) {
+    const bulletX = this.x + this.width / 2;
+    const bulletY = this.y + this.height;
+
+    if (this.attackPattern === 'aimed' && player) {
+      const dx = player.centerX - bulletX;
+      const dy = player.centerY - bulletY;
+      const dist = Math.hypot(dx, dy) || 1;
+      enemyBullets.push(
+        new EnemyBullet(bulletX, bulletY, (dx / dist) * ENEMY_BULLET.speed, (dy / dist) * ENEMY_BULLET.speed)
+      );
+    } else if (this.attackPattern === 'spread') {
+      for (const angle of [-0.4, 0, 0.4]) {
+        enemyBullets.push(
+          new EnemyBullet(bulletX, bulletY, Math.sin(angle) * ENEMY_BULLET.speed, Math.cos(angle) * ENEMY_BULLET.speed)
+        );
+      }
+    } else {
+      enemyBullets.push(new EnemyBullet(bulletX, bulletY));
+    }
+
+    playEnemyFireSound();
   }
 
   hasReachedBottom() {
@@ -74,6 +117,12 @@ export class Alien {
       this._drawWeaver(ctx);
     } else if (this.typeKey === 'stalker') {
       this._drawStalker(ctx);
+    } else if (this.typeKey === 'sentinel') {
+      this._drawSentinel(ctx);
+    } else if (this.typeKey === 'marksman') {
+      this._drawMarksman(ctx);
+    } else if (this.typeKey === 'vanguard') {
+      this._drawVanguard(ctx);
     } else {
       this._drawGrunt(ctx);
     }
@@ -225,6 +274,133 @@ export class Alien {
     ctx.moveTo(0, 0);
     ctx.lineTo(side * w * 0.32, h * 0.18);
     ctx.stroke();
+    ctx.restore();
+  }
+
+  // Floating drone: three probe arms slowly orbit the body, tipped with
+  // a small node, around a pulsing iris — the first attacker type, wave 10+.
+  _drawSentinel(ctx) {
+    const { x, y, width: w, height: h, age } = this;
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) {
+      const angle = age * 1.5 + i * ((Math.PI * 2) / 3);
+      const px = cx + Math.cos(angle) * w * 0.55;
+      const py = cy + Math.sin(angle) * h * 0.55;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(px, py);
+      ctx.stroke();
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, w * 0.32, 0, Math.PI * 2);
+    ctx.fill();
+
+    const pulse = 0.5 + 0.5 * Math.sin(age * 6);
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.4 + 0.4 * pulse})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, w * 0.13, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Insect-legged aimed shooter: its eye flashes red right before it
+  // fires (tied to fireCooldown), giving a fair visual warning.
+  _drawMarksman(ctx) {
+    const { x, y, width: w, height: h, age } = this;
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 2; i++) {
+      const swing = Math.sin(age * 7 + i * Math.PI) * 0.4;
+      this._drawMarksmanLeg(ctx, cx, cy, -1, i, swing);
+      this._drawMarksmanLeg(ctx, cx, cy, 1, i, -swing);
+    }
+
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, w * 0.3, h * 0.34, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const chargeRatio = this.fireInterval > 0 ? 1 - this.fireCooldown / this.fireInterval : 0;
+    ctx.fillStyle = chargeRatio > 0.85 ? '#ff2e2e' : '#ffffff';
+    ctx.beginPath();
+    ctx.arc(cx, cy - h * 0.05, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  _drawMarksmanLeg(ctx, cx, cy, side, index, swing) {
+    const { width: w, height: h } = this;
+    const rootX = cx + side * w * 0.25;
+    const rootY = cy - h * 0.1 + index * (h * 0.25);
+
+    ctx.save();
+    ctx.translate(rootX, rootY);
+    ctx.rotate(swing);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(side * w * 0.3, h * 0.22);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Armored spread-shooter: two pincers open and close, and its
+  // remaining hits are shown as pips like the Brute's.
+  _drawVanguard(ctx) {
+    const { x, y, width: w, height: h, age } = this;
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const pincerAngle = 0.3 + Math.sin(age * 4) * 0.15;
+
+    ctx.fillStyle = this.color;
+    this._drawVanguardPincer(ctx, cx, cy, -1, pincerAngle);
+    this._drawVanguardPincer(ctx, cx, cy, 1, pincerAngle);
+
+    ctx.beginPath();
+    ctx.moveTo(cx, y);
+    ctx.lineTo(x + w * 0.85, y + h * 0.3);
+    ctx.lineTo(x + w * 0.85, y + h * 0.7);
+    ctx.lineTo(cx, y + h);
+    ctx.lineTo(x + w * 0.15, y + h * 0.7);
+    ctx.lineTo(x + w * 0.15, y + h * 0.3);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#0a0a1a';
+    ctx.fillRect(cx - w * 0.12, cy - h * 0.1, w * 0.24, h * 0.2);
+
+    const pipWidth = 5;
+    const pipGap = 3;
+    for (let i = 0; i < this.maxHp; i++) {
+      ctx.fillStyle = i < this.hp ? '#ffffff' : 'rgba(255, 255, 255, 0.25)';
+      ctx.fillRect(x + i * (pipWidth + pipGap), y - 8, pipWidth, 4);
+    }
+  }
+
+  _drawVanguardPincer(ctx, cx, cy, side, angle) {
+    const { width: w, height: h } = this;
+    const rootX = cx + side * w * 0.42;
+
+    ctx.save();
+    ctx.translate(rootX, cy);
+    ctx.rotate(angle * side);
+    ctx.beginPath();
+    ctx.moveTo(0, -h * 0.15);
+    ctx.lineTo(side * w * 0.28, -h * 0.05);
+    ctx.lineTo(side * w * 0.22, h * 0.1);
+    ctx.lineTo(0, h * 0.15);
+    ctx.closePath();
+    ctx.fill();
     ctx.restore();
   }
 }

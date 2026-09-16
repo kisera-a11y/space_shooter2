@@ -234,7 +234,7 @@ export class Game {
     // wave (see WAVE_TRANSITION) instead of immediately being in motion,
     // and nothing new spawns during that beat either.
     if (this.waveTransitionTimer <= 0) {
-      for (const alien of this.aliens) alien.update(dt);
+      for (const alien of this.aliens) alien.update(dt, this.enemyBullets, this.player);
       for (const meteor of this.meteors) meteor.update(dt);
       if (this.boss) this.boss.update(dt, this.enemyBullets);
       this._updateSpawning(dt);

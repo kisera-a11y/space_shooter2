@@ -271,6 +271,53 @@ export const ALIEN_TYPES = {
     movement: 'drift',
     driftSpeed: 90,
   },
+  // The first aliens that shoot back (canAttack), phased in starting at
+  // wave 10 — see Alien._fire()/Alien.update() in entities/alien.js.
+  // attackPattern picks how: 'straight' fires one bullet straight down,
+  // 'aimed' leads toward the player's position at the moment it fires,
+  // 'spread' fans out three bullets like a boss's spread pattern.
+  sentinel: {
+    width: 30,
+    height: 30,
+    color: '#c77dff',
+    hp: 1,
+    scoreValue: 22,
+    xpValue: 16,
+    speedMultiplier: 0.9,
+    minWave: 10,
+    canAttack: true,
+    attackPattern: 'straight',
+    fireInterval: 2.2,
+  },
+  // Aims at the player instead of just firing straight down, so standing
+  // still under it is no longer automatically safe.
+  marksman: {
+    width: 34,
+    height: 28,
+    color: '#ff9f4d',
+    hp: 2,
+    scoreValue: 30,
+    xpValue: 22,
+    speedMultiplier: 0.8,
+    minWave: 11,
+    canAttack: true,
+    attackPattern: 'aimed',
+    fireInterval: 2.6,
+  },
+  // The toughest regular alien attacker — 3 hp and a 3-way spread shot.
+  vanguard: {
+    width: 44,
+    height: 36,
+    color: '#5c7cff',
+    hp: 3,
+    scoreValue: 40,
+    xpValue: 30,
+    speedMultiplier: 0.55,
+    minWave: 13,
+    canAttack: true,
+    attackPattern: 'spread',
+    fireInterval: 3,
+  },
 };
 
 // Every kill grants xp (aliens included, via ALIEN_TYPES.xpValue above) —
