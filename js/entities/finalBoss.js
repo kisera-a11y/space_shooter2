@@ -1,4 +1,4 @@
-import { BOSS, FINAL_BOSS, CANVAS_WIDTH, CANVAS_HEIGHT } from '../config.js';
+import { BOSS, FINAL_BOSS, XP, CANVAS_WIDTH, CANVAS_HEIGHT } from '../config.js';
 import { Boss } from './boss.js';
 import { EnemyBullet } from './enemyBullet.js';
 import { playEnemyFireSound } from '../audio.js';
@@ -30,6 +30,7 @@ export class FinalBoss extends Boss {
     this.fireInterval = FINAL_BOSS.fireInterval;
     this.fireCooldown = this.fireInterval;
     this.scoreValue = FINAL_BOSS.scoreValue;
+    this.xpValue = XP.finalBossValue;
 
     this.chargeTargetY = CANVAS_HEIGHT * FINAL_BOSS.chargeDepthRatio;
     this.chargeState = 'idle'; // idle -> charging -> holding -> retreating -> idle

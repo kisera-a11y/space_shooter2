@@ -6,7 +6,7 @@ import { PowerUp } from './entities/powerup.js';
 import { Boss } from './entities/boss.js';
 import { FinalBoss } from './entities/finalBoss.js';
 import { Starfield } from './starfield.js';
-import { playExplosionSound, startBackgroundMusic, stopBackgroundMusic } from './audio.js';
+import { playExplosionSound, startBackgroundMusic, stopBackgroundMusic, playLevelUpSound } from './audio.js';
 
 export class Game {
   constructor(ctx, input) {
@@ -29,6 +29,7 @@ export class Game {
     this.defeatedFinalBoss = false;
     this.waveTransitionTimer = 0;
     this.waveLabelTimer = 0;
+    this.levelUpLabelTimer = 0;
     this.score = 0;
     this.lives = PLAYER.startLives;
     this.wave = 1;
@@ -122,6 +123,9 @@ export class Game {
     if (this.waveLabelTimer > 0) {
       this.waveLabelTimer = Math.max(0, this.waveLabelTimer - dt);
     }
+    if (this.levelUpLabelTimer > 0) {
+      this.levelUpLabelTimer = Math.max(0, this.levelUpLabelTimer - dt);
+    }
 
     this.player.update(dt, this.input, this.bullets);
 
@@ -186,6 +190,7 @@ export class Game {
           if (!bullet.pierce) bullet.hit = true;
           if (alien.takeHit(bullet.damage)) {
             this.score += alien.scoreValue;
+            if (this.player.addXp(alien.xpValue)) this._showLevelUp();
             const cx = alien.x + alien.width / 2;
             const cy = alien.y + alien.height / 2;
             this.explosions.push(new Explosion(cx, cy));
@@ -202,6 +207,7 @@ export class Game {
         if (this.boss.takeHit(bullet.damage)) {
           const isFinalBoss = this.boss instanceof FinalBoss;
           this.score += this.boss.scoreValue;
+          if (this.player.addXp(this.boss.xpValue)) this._showLevelUp();
           this.explosions.push(
             new Explosion(this.boss.centerX, this.boss.centerY, {
               duration: isFinalBoss ? 1.5 : 1,
@@ -245,6 +251,11 @@ export class Game {
         color: POWERUP.types[powerup.type].color,
       })
     );
+  }
+
+  _showLevelUp() {
+    this.levelUpLabelTimer = 1.2;
+    playLevelUpSound();
   }
 
   _isColliding(a, b) {
@@ -307,6 +318,7 @@ export class Game {
 
     this._drawHud();
     this._drawWaveLabel();
+    this._drawLevelUpLabel();
 
     if (this.state === STATE.GAME_OVER) {
       this._drawGameOverScreen();
@@ -332,14 +344,27 @@ export class Game {
     ctx.textAlign = 'left';
     ctx.fillText(`Score: ${this.score}`, 16, 28);
     ctx.fillText(`Wave: ${this.wave}`, 16, 52);
+    ctx.fillText(`Lvl ${this.player.level}: ${this.player.weapon.name}`, 16, 76);
 
     if (this.player.chargedLaserTimeRemaining > 0) {
       ctx.fillStyle = '#8be9ff';
-      ctx.fillText(`Laser: ${this.player.chargedLaserTimeRemaining.toFixed(1)}s`, 16, 76);
+      ctx.fillText(`Laser: ${this.player.chargedLaserTimeRemaining.toFixed(1)}s`, 16, 100);
     }
 
     ctx.textAlign = 'right';
     ctx.fillText(`Lives: ${'▲'.repeat(Math.max(this.lives, 0))}`, CANVAS_WIDTH - 16, 28);
+    ctx.textAlign = 'left';
+  }
+
+  _drawLevelUpLabel() {
+    if (this.levelUpLabelTimer <= 0) return;
+    const ctx = this.ctx;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#8be9ff';
+    ctx.font = 'bold 32px "Courier New", monospace';
+    ctx.fillText('LEVEL UP!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 60);
+    ctx.font = 'bold 20px "Courier New", monospace';
+    ctx.fillText(`Unlocked: ${this.player.weapon.name}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 92);
     ctx.textAlign = 'left';
   }
 

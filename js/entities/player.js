@@ -1,4 +1,4 @@
-import { PLAYER, CANVAS_WIDTH, CANVAS_HEIGHT, BULLET } from '../config.js';
+import { PLAYER, CANVAS_WIDTH, CANVAS_HEIGHT, BULLET, XP, WEAPON_LEVELS } from '../config.js';
 import { Bullet } from './bullet.js';
 import { playFireSound } from '../audio.js';
 
@@ -11,6 +11,24 @@ export class Player {
     this.cooldownRemaining = 0;
     this.chargedLaserTimeRemaining = 0;
     this.respawnTimer = 0;
+    this.level = 1;
+    this.xp = 0;
+  }
+
+  get weapon() {
+    return WEAPON_LEVELS[this.level - 1];
+  }
+
+  // Returns true if this xp gain pushed the player up one or more levels
+  // (capped at WEAPON_LEVELS.length — there's no weapon beyond the last tier).
+  addXp(amount) {
+    this.xp += amount;
+    let leveledUp = false;
+    while (this.level < XP.levelThresholds.length && this.xp >= XP.levelThresholds[this.level]) {
+      this.level += 1;
+      leveledUp = true;
+    }
+    return leveledUp;
   }
 
   update(dt, input, bullets) {
@@ -37,7 +55,7 @@ export class Player {
 
     if (input.isFiring() && this.cooldownRemaining <= 0) {
       this._fire(bullets);
-      this.cooldownRemaining = PLAYER.fireCooldown;
+      this.cooldownRemaining = this.weapon.cooldown;
     }
   }
 
@@ -53,20 +71,41 @@ export class Player {
   }
 
   _fire(bullets) {
-    const charged = this.chargedLaserTimeRemaining > 0;
-    const width = charged ? BULLET.chargedWidth : BULLET.width;
-    const bulletX = this.x + this.width / 2 - width / 2;
     const bulletY = this.y - BULLET.height;
 
-    bullets.push(
-      new Bullet(bulletX, bulletY, {
-        width,
-        damage: charged ? BULLET.chargedDamage : 1,
-        pierce: charged,
-        color: charged ? BULLET.chargedColor : BULLET.color,
-      })
-    );
-    playFireSound(charged);
+    // The charged-laser power-up overrides the weapon tier entirely while
+    // it's active — a single wide, piercing shot regardless of level.
+    if (this.chargedLaserTimeRemaining > 0) {
+      const bulletX = this.x + this.width / 2 - BULLET.chargedWidth / 2;
+      bullets.push(
+        new Bullet(bulletX, bulletY, {
+          width: BULLET.chargedWidth,
+          damage: BULLET.chargedDamage,
+          pierce: true,
+          color: BULLET.chargedColor,
+        })
+      );
+      playFireSound(true);
+      return;
+    }
+
+    const { bulletCount, spreadAngle } = this.weapon;
+    const parallelSpacing = 10; // px between barrels when firing straight up
+
+    for (let i = 0; i < bulletCount; i++) {
+      const mid = (bulletCount - 1) / 2;
+      let vx = 0;
+      let bulletX = this.x + this.width / 2 - BULLET.width / 2;
+
+      if (spreadAngle > 0) {
+        vx = Math.sin((i - mid) * spreadAngle) * BULLET.speed;
+      } else {
+        bulletX += (i - mid) * parallelSpacing;
+      }
+
+      bullets.push(new Bullet(bulletX, bulletY, { vx }));
+    }
+    playFireSound(false);
   }
 
   get centerX() {

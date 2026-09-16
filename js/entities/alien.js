@@ -13,6 +13,7 @@ export class Alien {
     this.maxHp = type.hp;
     this.hp = type.hp;
     this.scoreValue = type.scoreValue;
+    this.xpValue = type.xpValue;
     this.destroyed = false;
   }
 

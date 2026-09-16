@@ -24,8 +24,9 @@ js/
   game.js              Game state machine (start / playing / game over), spawning,
                         collisions, wave/difficulty progression, HUD and screens
   entities/
-    player.js          Player ship: movement, firing, cooldown, respawn, drawing
-    bullet.js           Player projectile (normal or charged-laser variant)
+    player.js          Player ship: movement, firing (weapon-tier-driven), XP/level,
+                       cooldown, respawn, drawing
+    bullet.js           Player projectile (normal, parallel/spread, or charged-laser)
     alien.js             Alien: type-driven stats/shape, hp, downward movement
     boss.js               Large boss: entry, left/right patrol, firing, hp/health bar,
                           four visually distinct variants
@@ -117,7 +118,8 @@ instead of normal aliens:
   screen; it never advances toward the player like regular aliens do.
 - It periodically fires a bullet straight down at the player.
 - Its remaining hp is shown as a health bar above it (green → yellow →
-  red as it takes damage).
+  red as it takes damage). They're a real fight — `BOSS.baseHp`/`hpPerBoss`
+  make even the first one take sustained, accurate fire to bring down.
 - Each successive boss (the 2nd, 3rd, ...) has more hp, moves faster,
   and fires more often, via `BOSS.hpPerBoss` / `moveSpeedPerBoss` /
   `fireIntervalStepDown` in `config.js`.
@@ -140,6 +142,26 @@ a unique, tougher capstone fight instead of the regular rotation:
   and a 2-bullet burst.
 - Defeating it ends the run with a victory screen instead of continuing
   to another wave.
+
+### XP and weapon levels
+
+Every alien and boss kill grants XP (`xpValue` in `ALIEN_TYPES`/`XP` in
+`config.js`) — this is what makes killing regular aliens worthwhile
+beyond score, not just a means to clear the wave. XP accumulates toward
+a fixed progression of five weapon tiers (`WEAPON_LEVELS`), each a
+permanent upgrade to the player's default fire:
+
+1. **Single Shot** (start)
+2. **Rapid Fire** — shorter cooldown
+3. **Twin Cannons** — two parallel shots
+4. **Triple Cannons** — three parallel shots, shorter cooldown still
+5. **Spread Array** — three shots fanned outward, the fastest cooldown
+
+Leveling up shows a "LEVEL UP!" banner with a sound and updates the HUD
+(`Lvl n: <weapon name>`). The charged-laser power-up still overrides
+whatever tier you're on with its own wide piercing shot for its
+duration — the weapon level is the permanent baseline, the power-up is a
+temporary boost on top of it.
 
 ### Sound
 

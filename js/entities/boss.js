@@ -1,4 +1,4 @@
-import { BOSS, BOSS_VARIANTS, CANVAS_WIDTH } from '../config.js';
+import { BOSS, BOSS_VARIANTS, XP, CANVAS_WIDTH } from '../config.js';
 import { EnemyBullet } from './enemyBullet.js';
 import { playEnemyFireSound } from '../audio.js';
 
@@ -31,6 +31,7 @@ export class Boss {
     this.fireCooldown = this.fireInterval;
 
     this.scoreValue = BOSS.baseScoreValue + (bossIndex - 1) * BOSS.scorePerBoss;
+    this.xpValue = XP.bossBaseValue + (bossIndex - 1) * XP.bossValuePerBoss;
 
     // Descends into place, invulnerable, before patrolling/firing begins.
     this.state = 'entering';

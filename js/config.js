@@ -56,8 +56,8 @@ export const BOSS = {
   entrySpeed: 80, // px/s while descending into position
   baseMoveSpeed: 70, // horizontal patrol speed for the 1st boss
   moveSpeedPerBoss: 15,
-  baseHp: 40,
-  hpPerBoss: 25,
+  baseHp: 90, // roughly doubled so intermediate bosses are a real fight
+  hpPerBoss: 45,
   baseFireInterval: 1.6, // seconds between shots, 1st boss
   fireIntervalStepDown: 0.2,
   minFireInterval: 0.5,
@@ -93,7 +93,6 @@ export const FINAL_BOSS = {
   bossNumber: 5,
   widthRatio: 0.4,
   heightRatio: 0.24,
-  hp: 260,
   moveSpeed: 110,
   fireInterval: 1.1,
   chargeCooldownMin: 3.5, // seconds between charge attacks
@@ -102,6 +101,7 @@ export const FINAL_BOSS = {
   chargeForwardSpeed: 260,
   chargeRetreatSpeed: 160,
   chargeHoldDuration: 0.4, // pause at the bottom of the lunge
+  hp: 320, // toughest fight in the game, clearly above the last regular boss
   scoreValue: 1000,
   color: '#8b1e3f',
   coreColor: '#ff2e63',
@@ -140,6 +140,7 @@ export const ALIEN_TYPES = {
     color: '#ff5c8a',
     hp: 1,
     scoreValue: 10,
+    xpValue: 10,
     speedMultiplier: 1,
     minWave: 1,
   },
@@ -149,6 +150,7 @@ export const ALIEN_TYPES = {
     color: '#7cfc9a',
     hp: 1,
     scoreValue: 15,
+    xpValue: 12,
     speedMultiplier: 1.5,
     minWave: 2,
   },
@@ -158,10 +160,35 @@ export const ALIEN_TYPES = {
     color: '#b565f2',
     hp: 3,
     scoreValue: 30,
+    xpValue: 25,
     speedMultiplier: 0.6,
     minWave: 3,
   },
 };
+
+// Every kill grants xp (aliens included, via ALIEN_TYPES.xpValue above) —
+// this is what makes killing regular aliens worthwhile beyond score.
+// Levels are a fixed progression (one per WEAPON_LEVELS entry below);
+// levelThresholds[i] is the *cumulative* xp needed to reach level i+1,
+// so levelThresholds.length must equal WEAPON_LEVELS.length.
+export const XP = {
+  bossBaseValue: 60, // xp for the 1st boss; scales like BOSS's own hp/speed
+  bossValuePerBoss: 15,
+  finalBossValue: 300,
+  levelThresholds: [0, 100, 250, 450, 700],
+};
+
+// The player's weapon upgrades with XP level (index 0 == level 1, the
+// starting weapon). Charged-laser power-ups still work on top of
+// whatever level the player has reached — this is the *permanent*
+// progression, powerups are a temporary boost.
+export const WEAPON_LEVELS = [
+  { name: 'Single Shot', cooldown: 0.25, bulletCount: 1, spreadAngle: 0 },
+  { name: 'Rapid Fire', cooldown: 0.18, bulletCount: 1, spreadAngle: 0 },
+  { name: 'Twin Cannons', cooldown: 0.18, bulletCount: 2, spreadAngle: 0 },
+  { name: 'Triple Cannons', cooldown: 0.16, bulletCount: 3, spreadAngle: 0 },
+  { name: 'Spread Array', cooldown: 0.14, bulletCount: 3, spreadAngle: 0.18 },
+];
 
 export const STAR_COUNT = 90;
 

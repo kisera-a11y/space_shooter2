@@ -82,6 +82,30 @@ export function playExplosionSound() {
   thump.stop(now + 0.3);
 }
 
+export function playLevelUpSound() {
+  const ctx = getContext();
+  const now = ctx.currentTime;
+  const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6 — a bright arpeggio
+  const noteDuration = 0.09;
+
+  notes.forEach((freq, i) => {
+    const startTime = now + i * noteDuration;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(freq, startTime);
+
+    gain.gain.setValueAtTime(0.15, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + noteDuration);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + noteDuration);
+  });
+}
+
 export function playEnemyFireSound() {
   const ctx = getContext();
   const now = ctx.currentTime;
