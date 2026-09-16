@@ -58,8 +58,9 @@ server is recommended.)
 ## Gameplay
 
 - Destroy aliens by shooting them to score points.
-- If any alien reaches the bottom of the screen, you lose a life and the
-  wave resets.
+- If an alien actually touches the ship, you lose a life and the wave
+  resets — an alien that merely passes the bottom of the screen without
+  hitting you just despawns.
 - Clearing all aliens in a wave advances you to the next wave, which
   spawns more aliens moving faster.
 - The game ends when you run out of lives; press Space to restart.
@@ -88,12 +89,19 @@ drop a falling pickup; touch it with the ship to collect:
 
 ### Losing a life
 
-When an alien reaches the bottom, the ship plays a brief explosion
-effect, disappears for a moment, then reappears re-centered at the
-bottom before play continues.
+When an alien collides with the ship, it plays an explosion (particle
+burst + a synthesized boom), disappears for a moment, then reappears
+re-centered at the bottom before play continues.
+
+### Sound
+
+All sound is synthesized with the Web Audio API (`js/audio.js`) — no
+audio asset files. A quiet ambient drone plays while a run is active
+(starts on Space to begin, stops on game over), alongside the laser-fire
+and explosion sound effects.
 
 ## What's next
 
 This is intentionally a minimal, playable prototype. Natural next steps
-(not yet implemented) include touch-drag movement, background music, and
-more alien behaviors (e.g. side-to-side movement or shooting back).
+(not yet implemented) include touch-drag movement and more alien
+behaviors (e.g. side-to-side movement or shooting back).

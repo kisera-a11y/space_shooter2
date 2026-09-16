@@ -4,6 +4,7 @@ import { Alien } from './entities/alien.js';
 import { Explosion } from './entities/explosion.js';
 import { PowerUp } from './entities/powerup.js';
 import { Starfield } from './starfield.js';
+import { playExplosionSound, startBackgroundMusic, stopBackgroundMusic } from './audio.js';
 
 export class Game {
   constructor(ctx, input) {
@@ -29,6 +30,7 @@ export class Game {
     this._resetRunState();
     this.state = STATE.PLAYING;
     this._spawnWave();
+    startBackgroundMusic();
   }
 
   _spawnWave() {
@@ -110,16 +112,20 @@ export class Game {
     this._handleCollisions();
 
     // Ship is hidden/inactive while its destruction plays out, so it
-    // can't collect anything during that window.
+    // can't collect power-ups or be hit again during that window.
     if (this.player.respawnTimer <= 0) {
       this._handlePowerupCollisions();
+
+      const collidedAlien = this.aliens.find((a) => this._isColliding(this.player, a));
+      if (collidedAlien) {
+        this._loseLife();
+      }
     }
     this.powerups = this.powerups.filter((p) => !p.collected && !p.isOffscreen());
 
-    const reachedBottom = this.aliens.some((a) => a.hasReachedBottom());
-    if (reachedBottom) {
-      this._loseLife();
-    }
+    // An alien that slips past without touching the ship just despawns —
+    // only an actual collision (handled above) costs a life.
+    this.aliens = this.aliens.filter((a) => !a.hasReachedBottom());
 
     if (this.aliens.length === 0 && this.state === STATE.PLAYING) {
       this.wave += 1;
@@ -202,9 +208,11 @@ export class Game {
         color: '#4fd1ff',
       })
     );
+    playExplosionSound();
 
     if (this.lives <= 0) {
       this.state = STATE.GAME_OVER;
+      stopBackgroundMusic();
     } else {
       this.player.respawn();
       this._spawnWave();
