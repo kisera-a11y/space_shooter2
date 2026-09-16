@@ -63,7 +63,48 @@ export const BOSS = {
   minFireInterval: 0.5,
   baseScoreValue: 200,
   scorePerBoss: 100,
-  color: '#ff2e63',
+};
+
+// Regular bosses cycle through these looks (by bossIndex, wrapping around)
+// so each encounter is visually distinct — see Boss.draw()'s per-shape
+// methods in entities/boss.js. The final boss (below) has its own unique
+// look instead of picking from this list.
+export const BOSS_VARIANTS = [
+  { shape: 'hex', color: '#ff2e63' },
+  { shape: 'saucer', color: '#7b2ff7' },
+  { shape: 'carrier', color: '#ff8c42' },
+  { shape: 'spider', color: '#2ee6a8' },
+];
+
+// Brief pause + on-screen label at the start of every wave (regular or
+// boss), so the transition between levels reads clearly instead of the
+// next wave just appearing mid-motion.
+export const WAVE_TRANSITION = {
+  holdDuration: 1, // seconds aliens/boss stay frozen at the wave's start
+  labelDuration: 0.5, // seconds the "WAVE n" text is shown
+};
+
+// A one-time, tougher-than-normal encounter that replaces the regular
+// boss on this specific boss encounter number (5th boss == wave 15 at
+// the default everyNWaves of 3). Unlike a regular Boss it can lunge down
+// toward the player (and back) and alternates between several attack
+// patterns — see entities/finalBoss.js.
+export const FINAL_BOSS = {
+  bossNumber: 5,
+  widthRatio: 0.4,
+  heightRatio: 0.24,
+  hp: 260,
+  moveSpeed: 110,
+  fireInterval: 1.1,
+  chargeCooldownMin: 3.5, // seconds between charge attacks
+  chargeCooldownMax: 5.5,
+  chargeDepthRatio: 0.62, // how far down the screen it lunges (of CANVAS_HEIGHT) — deep enough to actually reach the player
+  chargeForwardSpeed: 260,
+  chargeRetreatSpeed: 160,
+  chargeHoldDuration: 0.4, // pause at the bottom of the lunge
+  scoreValue: 1000,
+  color: '#8b1e3f',
+  coreColor: '#ff2e63',
 };
 
 // Power-ups drop from destroyed aliens and fall straight down; the player
@@ -128,4 +169,5 @@ export const STATE = {
   START: 'start',
   PLAYING: 'playing',
   GAME_OVER: 'game_over',
+  VICTORY: 'victory',
 };

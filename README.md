@@ -27,8 +27,11 @@ js/
     player.js          Player ship: movement, firing, cooldown, respawn, drawing
     bullet.js           Player projectile (normal or charged-laser variant)
     alien.js             Alien: type-driven stats/shape, hp, downward movement
-    boss.js               Large boss: entry, left/right patrol, firing, hp/health bar
-    enemyBullet.js         Boss projectile aimed down at the player
+    boss.js               Large boss: entry, left/right patrol, firing, hp/health bar,
+                          four visually distinct variants
+    finalBoss.js            One-time capstone boss: extends Boss with a forward/back
+                          charge attack and multiple weapon patterns
+    enemyBullet.js         Boss projectile aimed down at the player (straight or angled)
     powerup.js            Falling pickup (charged laser / extra life)
     explosion.js          Configurable particle burst (alien kill, ship loss, pickup)
   audio.js              Synthesized sound effects + 8-bit chiptune loop (Web Audio
@@ -96,6 +99,14 @@ When an alien (or a boss's shot) hits the ship, it plays an explosion
 (particle burst + a synthesized boom), disappears for a moment, then
 reappears re-centered at the bottom before play continues.
 
+### Wave transitions
+
+At the start of every wave (regular or boss), aliens/the boss hold in
+place for a second (`WAVE_TRANSITION.holdDuration`) instead of
+immediately being in motion, and a "WAVE n" label flashes at the center
+of the screen for about half a second (`WAVE_TRANSITION.labelDuration`).
+The player can still move and shoot during the hold.
+
 ### Boss fights
 
 Every `BOSS.everyNWaves` waves (3 by default), the regular wave is
@@ -112,6 +123,23 @@ instead of normal aliens:
   `fireIntervalStepDown` in `config.js`.
 - Losing a life mid-fight doesn't reset the boss's hp — only a regular
   wave respawns a fresh set of aliens after you die.
+- Each encounter cycles through a different look (`BOSS_VARIANTS` in
+  `config.js`): a hex-shaped ship, a saucer, a blocky carrier, and a
+  spider-legged variant, repeating from there.
+
+### Final boss
+
+The 5th boss encounter (wave 15 by default, `FINAL_BOSS.bossNumber`) is
+a unique, tougher capstone fight instead of the regular rotation:
+
+- Alongside its left/right patrol, it periodically charges down toward
+  the player, holds briefly, then retreats back up — it isn't limited to
+  side-to-side movement like a regular boss, and the charge can actually
+  hit the ship if you don't dodge out of its path.
+- It cycles between three attack patterns: a single shot, a 3-way spread,
+  and a 2-bullet burst.
+- Defeating it ends the run with a victory screen instead of continuing
+  to another wave.
 
 ### Sound
 

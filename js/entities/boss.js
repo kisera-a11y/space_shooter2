@@ -1,16 +1,21 @@
-import { BOSS, CANVAS_WIDTH } from '../config.js';
+import { BOSS, BOSS_VARIANTS, CANVAS_WIDTH } from '../config.js';
 import { EnemyBullet } from './enemyBullet.js';
 import { playEnemyFireSound } from '../audio.js';
 
 export class Boss {
   // bossIndex: 1 for the first boss encounter, 2 for the second, etc. —
-  // used to scale hp/speed/fire-rate so later bosses are tougher.
+  // used to scale hp/speed/fire-rate so later bosses are tougher, and to
+  // cycle through BOSS_VARIANTS so each encounter looks different.
   constructor(bossIndex) {
     this.bossIndex = bossIndex;
     this.width = CANVAS_WIDTH * BOSS.widthRatio;
     this.height = CANVAS_WIDTH * BOSS.heightRatio;
     this.x = CANVAS_WIDTH / 2 - this.width / 2;
     this.y = -this.height;
+
+    const variant = BOSS_VARIANTS[(bossIndex - 1) % BOSS_VARIANTS.length];
+    this.shape = variant.shape;
+    this.color = variant.color;
 
     this.maxHp = BOSS.baseHp + (bossIndex - 1) * BOSS.hpPerBoss;
     this.hp = this.maxHp;
@@ -87,9 +92,18 @@ export class Boss {
   }
 
   draw(ctx) {
+    if (this.shape === 'saucer') this._drawSaucer(ctx);
+    else if (this.shape === 'carrier') this._drawCarrier(ctx);
+    else if (this.shape === 'spider') this._drawSpider(ctx);
+    else this._drawHex(ctx);
+
+    this._drawHealthBar(ctx);
+  }
+
+  _drawHex(ctx) {
     const { x, y, width: w, height: h } = this;
 
-    ctx.fillStyle = BOSS.color;
+    ctx.fillStyle = this.color;
     ctx.beginPath();
     ctx.moveTo(x + w * 0.1, y);
     ctx.lineTo(x + w * 0.9, y);
@@ -108,8 +122,82 @@ export class Boss {
       ctx.arc(ex, y + h * 0.5, w * 0.035, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
 
-    this._drawHealthBar(ctx);
+  // Wide flattened disc with a dome and a row of rim lights.
+  _drawSaucer(ctx) {
+    const { x, y, width: w, height: h } = this;
+    const cx = x + w / 2;
+    const cy = y + h * 0.55;
+
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, w / 2, h * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.ellipse(cx, y + h * 0.25, w * 0.22, h * 0.28, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#fff8e7';
+    const lightCount = 6;
+    for (let i = 0; i < lightCount; i++) {
+      const t = i / (lightCount - 1);
+      const lx = x + w * (0.12 + t * 0.76);
+      ctx.beginPath();
+      ctx.arc(lx, cy + h * 0.15, w * 0.02, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Blocky central hull with two side pods and window slits.
+  _drawCarrier(ctx) {
+    const { x, y, width: w, height: h } = this;
+
+    ctx.fillStyle = this.color;
+    ctx.fillRect(x + w * 0.15, y, w * 0.7, h);
+    ctx.fillRect(x, y + h * 0.3, w * 0.2, h * 0.4);
+    ctx.fillRect(x + w * 0.8, y + h * 0.3, w * 0.2, h * 0.4);
+
+    ctx.fillStyle = '#1a0f05';
+    for (let i = 0; i < 4; i++) {
+      const wx = x + w * (0.28 + i * 0.15);
+      ctx.fillRect(wx, y + h * 0.35, w * 0.06, h * 0.15);
+    }
+  }
+
+  // Round body with four angled legs — reads as skittering rather than a
+  // conventional ship silhouette.
+  _drawSpider(ctx) {
+    const { x, y, width: w, height: h } = this;
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const bodyR = Math.min(w, h) * 0.28;
+
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = Math.max(4, w * 0.015);
+    const legOffsets = [
+      [-0.42, -0.35],
+      [0.42, -0.35],
+      [-0.42, 0.35],
+      [0.42, 0.35],
+    ];
+    for (const [dx, dy] of legOffsets) {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + w * dx, cy + h * dy);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, bodyR, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#1a0510';
+    ctx.beginPath();
+    ctx.arc(cx, cy, bodyR * 0.4, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   _drawHealthBar(ctx) {

@@ -1,9 +1,10 @@
-import { CANVAS_WIDTH, CANVAS_HEIGHT, ALIEN, ALIEN_TYPES, PLAYER, POWERUP, BOSS, STATE } from './config.js';
+import { CANVAS_WIDTH, CANVAS_HEIGHT, ALIEN, ALIEN_TYPES, PLAYER, POWERUP, BOSS, FINAL_BOSS, WAVE_TRANSITION, STATE } from './config.js';
 import { Player } from './entities/player.js';
 import { Alien } from './entities/alien.js';
 import { Explosion } from './entities/explosion.js';
 import { PowerUp } from './entities/powerup.js';
 import { Boss } from './entities/boss.js';
+import { FinalBoss } from './entities/finalBoss.js';
 import { Starfield } from './starfield.js';
 import { playExplosionSound, startBackgroundMusic, stopBackgroundMusic } from './audio.js';
 
@@ -25,6 +26,9 @@ export class Game {
     this.enemyBullets = [];
     this.boss = null;
     this.isBossWave = false;
+    this.defeatedFinalBoss = false;
+    this.waveTransitionTimer = 0;
+    this.waveLabelTimer = 0;
     this.score = 0;
     this.lives = PLAYER.startLives;
     this.wave = 1;
@@ -38,9 +42,14 @@ export class Game {
   }
 
   _spawnWave() {
+    this.waveTransitionTimer = WAVE_TRANSITION.holdDuration;
+    this.waveLabelTimer = WAVE_TRANSITION.labelDuration;
+
     this.isBossWave = this.wave % BOSS.everyNWaves === 0;
     if (this.isBossWave) {
-      this.boss = new Boss(this.wave / BOSS.everyNWaves);
+      const bossIndex = this.wave / BOSS.everyNWaves;
+      this.boss =
+        bossIndex === FINAL_BOSS.bossNumber ? new FinalBoss(bossIndex) : new Boss(bossIndex);
       return;
     }
 
@@ -96,7 +105,7 @@ export class Game {
       return;
     }
 
-    if (this.state === STATE.GAME_OVER) {
+    if (this.state === STATE.GAME_OVER || this.state === STATE.VICTORY) {
       if (this.input.consumeFirePressed()) {
         this.startGame();
       }
@@ -107,14 +116,25 @@ export class Game {
   }
 
   _updatePlaying(dt) {
+    if (this.waveTransitionTimer > 0) {
+      this.waveTransitionTimer = Math.max(0, this.waveTransitionTimer - dt);
+    }
+    if (this.waveLabelTimer > 0) {
+      this.waveLabelTimer = Math.max(0, this.waveLabelTimer - dt);
+    }
+
     this.player.update(dt, this.input, this.bullets);
 
     for (const bullet of this.bullets) bullet.update(dt);
     this.bullets = this.bullets.filter((b) => !b.isOffscreen());
 
-    for (const alien of this.aliens) alien.update(dt);
+    // Aliens/boss hold in place for the first moment of a new wave (see
+    // WAVE_TRANSITION) instead of immediately being in motion.
+    if (this.waveTransitionTimer <= 0) {
+      for (const alien of this.aliens) alien.update(dt);
+      if (this.boss) this.boss.update(dt, this.enemyBullets);
+    }
 
-    if (this.boss) this.boss.update(dt, this.enemyBullets);
     for (const bullet of this.enemyBullets) bullet.update(dt);
     this.enemyBullets = this.enemyBullets.filter((b) => !b.isOffscreen());
 
@@ -132,7 +152,8 @@ export class Game {
 
       const collidedAlien = this.aliens.find((a) => this._isColliding(this.player, a));
       const collidedEnemyBullet = this.enemyBullets.find((b) => this._isColliding(this.player, b));
-      if (collidedAlien || collidedEnemyBullet) {
+      const collidedBoss = this.boss && this._isColliding(this.player, this.boss);
+      if (collidedAlien || collidedEnemyBullet || collidedBoss) {
         if (collidedEnemyBullet) collidedEnemyBullet.hit = true;
         this._loseLife();
       }
@@ -146,8 +167,13 @@ export class Game {
 
     const waveCleared = this.isBossWave ? this.boss === null : this.aliens.length === 0;
     if (waveCleared && this.state === STATE.PLAYING) {
-      this.wave += 1;
-      this._spawnWave();
+      if (this.defeatedFinalBoss) {
+        this.state = STATE.VICTORY;
+        stopBackgroundMusic();
+      } else {
+        this.wave += 1;
+        this._spawnWave();
+      }
     }
   }
 
@@ -174,17 +200,19 @@ export class Game {
       if (this.boss && !bullet.hit && this._isColliding(bullet, this.boss)) {
         if (!bullet.pierce) bullet.hit = true;
         if (this.boss.takeHit(bullet.damage)) {
+          const isFinalBoss = this.boss instanceof FinalBoss;
           this.score += this.boss.scoreValue;
           this.explosions.push(
             new Explosion(this.boss.centerX, this.boss.centerY, {
-              duration: 1,
+              duration: isFinalBoss ? 1.5 : 1,
               minRadius: 10,
-              maxRadius: 90,
-              particleCount: 24,
+              maxRadius: isFinalBoss ? 140 : 90,
+              particleCount: isFinalBoss ? 36 : 24,
               color: '#ffb347',
             })
           );
           this.boss = null;
+          if (isFinalBoss) this.defeatedFinalBoss = true;
         }
       }
     }
@@ -278,10 +306,23 @@ export class Game {
     for (const explosion of this.explosions) explosion.draw(ctx);
 
     this._drawHud();
+    this._drawWaveLabel();
 
     if (this.state === STATE.GAME_OVER) {
       this._drawGameOverScreen();
+    } else if (this.state === STATE.VICTORY) {
+      this._drawVictoryScreen();
     }
+  }
+
+  _drawWaveLabel() {
+    if (this.waveLabelTimer <= 0) return;
+    const ctx = this.ctx;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffe066';
+    ctx.font = 'bold 40px "Courier New", monospace';
+    ctx.fillText(`WAVE ${this.wave}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+    ctx.textAlign = 'left';
   }
 
   _drawHud() {
@@ -341,6 +382,28 @@ export class Game {
     ctx.fillStyle = '#ffe066';
     ctx.font = 'bold 22px "Courier New", monospace';
     ctx.fillText('Press SPACE to Restart', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 80);
+
+    ctx.textAlign = 'left';
+  }
+
+  _drawVictoryScreen() {
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#7cfc9a';
+    ctx.font = 'bold 48px "Courier New", monospace';
+    ctx.fillText('VICTORY!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 60);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '22px "Courier New", monospace';
+    ctx.fillText('You defeated the final boss!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
+    ctx.fillText(`Final Score: ${this.score}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 12);
+
+    ctx.fillStyle = '#ffe066';
+    ctx.font = 'bold 22px "Courier New", monospace';
+    ctx.fillText('Press SPACE to Play Again', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 80);
 
     ctx.textAlign = 'left';
   }
