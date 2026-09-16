@@ -91,6 +91,22 @@ type's `minWave`, so adding another type later is just a new config entry:
 - **Brute** (purple, larger) — takes 3 hits to destroy and is worth more
   points, from wave 3. Remaining hits are shown as pips above it and it
   visibly dims as it takes damage.
+- **Weaver** (orange, moth-like) — sways side to side in a sine wave as
+  it descends instead of coming straight down (`movement: 'sway'` in
+  `ALIEN_TYPES`), with a pair of wings that flap in real time based on
+  how long it's been alive. Fragile but harder to lead a shot on, from
+  wave 3.
+- **Stalker** (teal, spider-legged) — bounces horizontally back and
+  forth across the screen while slowly descending (`movement: 'drift'`),
+  its three pairs of legs swinging out of phase with each other as it
+  moves. Takes 2 hits and is the toughest regular alien after the Brute,
+  from wave 4.
+
+Weaver and Stalker are also the first aliens with actual on-screen
+movement beyond a straight vertical drop — `Alien.update()` branches on
+each type's `movement` field, and their `draw()` methods use an `age`
+timer (seconds alive) rather than fixed animation frames, so wing-flap/
+leg-swing speed doesn't depend on framerate.
 
 ### Meteors
 

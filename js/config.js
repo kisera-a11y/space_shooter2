@@ -186,6 +186,37 @@ export const ALIEN_TYPES = {
     speedMultiplier: 0.6,
     minWave: 3,
   },
+  // Moth-like flier that sways side to side as it descends (movement:
+  // 'sway') instead of coming straight down, so it's harder to lead a
+  // shot on despite being fragile. See Alien.update()/_drawWeaver().
+  weaver: {
+    width: 30,
+    height: 26,
+    color: '#ffb347',
+    hp: 1,
+    scoreValue: 20,
+    xpValue: 15,
+    speedMultiplier: 1.2,
+    minWave: 3,
+    movement: 'sway',
+    swayAmplitude: 60,
+    swayFrequency: 2.2,
+  },
+  // Spider-legged drifter that bounces horizontally across the screen
+  // while slowly descending (movement: 'drift') rather than beelining
+  // down, forcing you to track it instead of just holding still under it.
+  stalker: {
+    width: 38,
+    height: 30,
+    color: '#4de8c9',
+    hp: 2,
+    scoreValue: 28,
+    xpValue: 20,
+    speedMultiplier: 0.7,
+    minWave: 4,
+    movement: 'drift',
+    driftSpeed: 90,
+  },
 };
 
 // Every kill grants xp (aliens included, via ALIEN_TYPES.xpValue above) —
