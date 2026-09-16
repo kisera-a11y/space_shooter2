@@ -214,6 +214,29 @@ export function playLevelDownSound() {
   });
 }
 
+// A short, solid "clink" for a shield absorbing a hit — a lower, duller
+// thud than the explosion sound so it reads as blocked rather than lost.
+export function playShieldHitSound() {
+  const ctx = getContext();
+  const now = ctx.currentTime;
+  const duration = 0.22;
+
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(220, now);
+  osc.frequency.exponentialRampToValueAtTime(90, now + duration);
+
+  gain.gain.setValueAtTime(0.22, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + duration);
+}
+
 export function playEnemyFireSound() {
   const ctx = getContext();
   const now = ctx.currentTime;

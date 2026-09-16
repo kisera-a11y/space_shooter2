@@ -12,6 +12,7 @@ export const PLAYER = {
   startLives: 3,
   fireCooldown: 0.25, // seconds between shots
   respawnDelay: 0.8, // seconds hidden/inactive after losing a life
+  shieldHitInvulnerability: 0.6, // seconds of immunity right after a shield absorbs a hit
 };
 
 export const BULLET = {
@@ -130,6 +131,15 @@ export const BOSS_DEATH = {
   finalScreenShakeMagnitude: 16,
 };
 
+// Permanent reward for defeating the final boss (see FINAL_BOSS below) —
+// unlike the temporary power-ups, this lasts the rest of the run: a new
+// ship look plus a speed boost and slow passive shield regeneration (up
+// to the shield power-up's own maxCharges). See Player.promoteToAce().
+export const ACE_SHIP = {
+  speedMultiplier: 1.2,
+  shieldRegenInterval: 18, // seconds between each free shield charge
+};
+
 // A one-time, tougher-than-normal encounter that replaces the regular
 // boss on this specific boss encounter number (5th boss == wave 15 at
 // the default everyNWaves of 3). Unlike a regular Boss it can lunge down
@@ -173,6 +183,15 @@ export const POWERUP = {
     life: {
       color: '#ff6b6b',
       weight: 1,
+    },
+    // Absorbs the next hit(s) instead of costing a life/weapon level (see
+    // Game._absorbHitWithShield()). Charges stack up to maxCharges rather
+    // than each pickup overwriting the last.
+    shield: {
+      color: '#5df2d6',
+      weight: 2,
+      charges: 1,
+      maxCharges: 3,
     },
   },
 };

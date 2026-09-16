@@ -7,7 +7,7 @@ import { PowerUp } from './entities/powerup.js';
 import { Boss } from './entities/boss.js';
 import { FinalBoss } from './entities/finalBoss.js';
 import { Starfield } from './starfield.js';
-import { playExplosionSound, startBackgroundMusic, stopBackgroundMusic, playLevelUpSound, playLevelDownSound, playPowerUpSound, playMilestoneSound } from './audio.js';
+import { playExplosionSound, startBackgroundMusic, stopBackgroundMusic, playLevelUpSound, playLevelDownSound, playPowerUpSound, playMilestoneSound, playShieldHitSound } from './audio.js';
 import { getHighScores, recordScore } from './highscores.js';
 
 function randomBetween(min, max) {
@@ -242,9 +242,10 @@ export class Game {
 
     this._handleCollisions();
 
-    // Ship is hidden/inactive while its destruction plays out, so it
-    // can't collect power-ups or be hit again during that window.
-    if (this.player.respawnTimer <= 0) {
+    // Ship is hidden/inactive while its destruction plays out, and briefly
+    // immune right after a shield absorbs a hit, so it can't collect
+    // power-ups or be hit again during either window.
+    if (this.player.respawnTimer <= 0 && this.player.invulnerableTimer <= 0) {
       this._handlePowerupCollisions();
 
       const collidedAlien = this.aliens.find((a) => this._isColliding(this.player, a));
@@ -254,7 +255,11 @@ export class Game {
       const collidedMeteor = this.meteors.find((m) => this._isColliding(this.player, m));
       if (collidedAlien || collidedEnemyBullet || collidedBoss || collidedMeteor) {
         if (collidedEnemyBullet) collidedEnemyBullet.hit = true;
-        this._loseLife();
+        if (this.player.hasShield()) {
+          this._absorbHitWithShield(collidedAlien);
+        } else {
+          this._loseLife();
+        }
       }
     }
     this.powerups = this.powerups.filter((p) => !p.collected && !p.isOffscreen());
@@ -335,6 +340,8 @@ export class Game {
       this.lives += 1;
     } else if (powerup.type === 'laser') {
       this.player.activateChargedLaser(POWERUP.types.laser.duration);
+    } else if (powerup.type === 'shield') {
+      this.player.activateShield(POWERUP.types.shield.charges);
     }
     playPowerUpSound();
 
@@ -428,6 +435,7 @@ export class Game {
       if (isFinalBoss) {
         this.milestoneLabelTimer = 3;
         playMilestoneSound();
+        this.player.promoteToAce();
       }
     }
   }
@@ -438,6 +446,33 @@ export class Game {
       a.x + a.width > b.x &&
       a.y < b.y + b.height &&
       a.y + a.height > b.y
+    );
+  }
+
+  // A shield charge blocks the hit instead of costing a life/weapon
+  // level. The specific alien that touched the ship is removed without
+  // score/xp (it wasn't a kill, just knocked aside) — a colliding meteor
+  // or boss is left alone since neither can be destroyed anyway, and an
+  // enemy bullet is already marked hit by the caller.
+  // Player.consumeShieldCharge() also grants a brief immunity window so
+  // the same still-overlapping hazard can't drain every charge across
+  // consecutive frames.
+  _absorbHitWithShield(collidedAlien) {
+    this.player.consumeShieldCharge();
+    playShieldHitSound();
+
+    if (collidedAlien) {
+      this.aliens = this.aliens.filter((a) => a !== collidedAlien);
+    }
+
+    this.explosions.push(
+      new Explosion(this.player.centerX, this.player.centerY, {
+        duration: 0.3,
+        minRadius: 6,
+        maxRadius: 30,
+        particleCount: 10,
+        color: POWERUP.types.shield.color,
+      })
     );
   }
 
@@ -570,13 +605,26 @@ export class Game {
     ctx.fillText(`Wave: ${this.wave}`, 16, 52);
     ctx.fillText(`Lvl ${this.player.level}: ${this.player.weapon.name}`, 16, 76);
 
+    let statusY = 100;
     if (this.player.chargedLaserTimeRemaining > 0) {
       ctx.fillStyle = '#8be9ff';
-      ctx.fillText(`Laser: ${this.player.chargedLaserTimeRemaining.toFixed(1)}s`, 16, 100);
+      ctx.fillText(`Laser: ${this.player.chargedLaserTimeRemaining.toFixed(1)}s`, 16, statusY);
+      statusY += 24;
+    }
+    if (this.player.shieldCharges > 0) {
+      ctx.fillStyle = POWERUP.types.shield.color;
+      ctx.fillText(`Shield: ${'◆'.repeat(this.player.shieldCharges)}`, 16, statusY);
     }
 
     ctx.textAlign = 'right';
+    ctx.fillStyle = '#ffffff';
     ctx.fillText(`Lives: ${'▲'.repeat(Math.max(this.lives, 0))}`, CANVAS_WIDTH - 16, 28);
+    if (this.player.isAce) {
+      // y=104 keeps clear of the on-screen pause button (CSS top:50px,
+      // 34px tall) which sits in this same top-right corner.
+      ctx.fillStyle = '#ffd23f';
+      ctx.fillText('ACE SHIP', CANVAS_WIDTH - 16, 104);
+    }
     ctx.textAlign = 'left';
   }
 

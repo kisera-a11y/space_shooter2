@@ -35,6 +35,16 @@ export class PowerUp {
     if (this.type === 'life') {
       ctx.fillRect(cx - r * 0.6, cy - r * 0.15, r * 1.2, r * 0.3);
       ctx.fillRect(cx - r * 0.15, cy - r * 0.6, r * 0.3, r * 1.2);
+    } else if (this.type === 'shield') {
+      // A small shield badge — a rounded-top pentagon.
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - r * 0.65);
+      ctx.lineTo(cx + r * 0.55, cy - r * 0.3);
+      ctx.lineTo(cx + r * 0.4, cy + r * 0.55);
+      ctx.lineTo(cx - r * 0.4, cy + r * 0.55);
+      ctx.lineTo(cx - r * 0.55, cy - r * 0.3);
+      ctx.closePath();
+      ctx.fill();
     } else {
       // Lightning bolt for the charged-laser pickup.
       ctx.beginPath();

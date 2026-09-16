@@ -129,12 +129,20 @@ drop a falling pickup; touch it with the ship to collect:
   enough damage to one-shot any current alien type. The ship glows while
   it's active, and the HUD shows the time remaining.
 - **Extra life** (red plus) — an immediate `+1` life.
+- **Shield** (teal badge) — grants a shield charge, shown as a ring
+  around the ship with one small marker per charge (stacks up to
+  `POWERUP.types.shield.maxCharges`). The next hit(s) — from an alien,
+  meteor, boss, or enemy bullet — are absorbed instead of costing a life
+  or a weapon level: the offending alien is knocked out (no score/xp,
+  it wasn't a kill), and a brief immunity window afterward stops the
+  same still-overlapping hazard from draining every charge at once.
 
 ### Losing a life
 
 When an alien (or a boss's shot) hits the ship, it plays an explosion
 (particle burst + a synthesized boom), disappears for a moment, then
-reappears re-centered at the bottom before play continues.
+reappears re-centered at the bottom before play continues. A shield
+charge (see Power-ups above) blocks this entirely if the player has one.
 
 ### Pause menu
 
@@ -220,6 +228,21 @@ after that (the 6th, 7th, ... boss encounters are back to the regular
 rotation), with alien speed and boss hp/speed/fire-rate scaling up every
 single stage with no cap, so the game keeps getting harder for as long
 as you can survive.
+
+### Ace ship
+
+Defeating the final boss also permanently upgrades the ship for the
+rest of the run (`Player.promoteToAce()`, `ACE_SHIP` in `config.js`) —
+unlike the temporary power-ups above, this doesn't wear off:
+
+- A new, sleeker twin-engine look with a gold trim stripe, instead of
+  just a recolor of the standard ship.
+- 20% faster movement (`ACE_SHIP.speedMultiplier`).
+- Slowly regenerates a free shield charge on its own over time
+  (`ACE_SHIP.shieldRegenInterval`), up to the shield power-up's own
+  charge cap — so shields stop being purely something you have to find.
+
+The HUD shows a gold "ACE SHIP" badge in the top-right once it's active.
 
 ### XP and weapon levels
 
