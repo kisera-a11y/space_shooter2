@@ -175,8 +175,8 @@ export class Game {
 
     ctx.fillStyle = '#ffffff';
     ctx.font = '20px "Courier New", monospace';
-    ctx.fillText('Move: ← → or A / D', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
-    ctx.fillText('Shoot: SPACE (hold for rapid fire)', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 12);
+    ctx.fillText('Move: ← → / A / D / on-screen buttons', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
+    ctx.fillText('Shoot: SPACE or ● (hold for rapid fire)', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 12);
     ctx.fillText('Destroy aliens before they reach you!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 44);
 
     ctx.fillStyle = '#ffe066';
