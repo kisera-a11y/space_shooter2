@@ -82,11 +82,77 @@ export function playExplosionSound() {
   thump.stop(now + 0.3);
 }
 
+// A fifth stacked under each melody note turns the bare square wave into
+// a small power chord — makes a weapon level-up read as more of an
+// event than a single blip, without changing its length.
 export function playLevelUpSound() {
   const ctx = getContext();
   const now = ctx.currentTime;
   const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6 — a bright arpeggio
-  const noteDuration = 0.09;
+  const noteDuration = 0.1;
+
+  notes.forEach((freq, i) => {
+    const startTime = now + i * noteDuration;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(freq, startTime);
+    gain.gain.setValueAtTime(0.16, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + noteDuration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + noteDuration);
+
+    const harmony = ctx.createOscillator();
+    const harmonyGain = ctx.createGain();
+    harmony.type = 'square';
+    harmony.frequency.setValueAtTime(freq * 1.5, startTime); // a fifth above
+    harmonyGain.gain.setValueAtTime(0.08, startTime);
+    harmonyGain.gain.exponentialRampToValueAtTime(0.001, startTime + noteDuration);
+    harmony.connect(harmonyGain);
+    harmonyGain.connect(ctx.destination);
+    harmony.start(startTime);
+    harmony.stop(startTime + noteDuration);
+  });
+}
+
+// A quick, bright pickup blip for collecting a power-up — deliberately
+// shorter and lighter than the level-up chord progression so the two
+// never get confused for each other.
+export function playPowerUpSound() {
+  const ctx = getContext();
+  const now = ctx.currentTime;
+  const notes = [880, 1318.5]; // A5, E6 — a two-note "ping"
+  const noteDuration = 0.08;
+
+  notes.forEach((freq, i) => {
+    const startTime = now + i * noteDuration * 0.8;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, startTime);
+
+    gain.gain.setValueAtTime(0.18, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + noteDuration);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + noteDuration);
+  });
+}
+
+// Reserved for the rare, big moments (reaching the final weapon tier,
+// defeating the final boss) — a longer climb than the regular level-up
+// arpeggio, resolving into a held sawtooth chord instead of just stopping.
+export function playMilestoneSound() {
+  const ctx = getContext();
+  const now = ctx.currentTime;
+  const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568]; // C5..G6
+  const noteDuration = 0.1;
 
   notes.forEach((freq, i) => {
     const startTime = now + i * noteDuration;
@@ -96,13 +162,31 @@ export function playLevelUpSound() {
     osc.type = 'square';
     osc.frequency.setValueAtTime(freq, startTime);
 
-    gain.gain.setValueAtTime(0.15, startTime);
+    gain.gain.setValueAtTime(0.17, startTime);
     gain.gain.exponentialRampToValueAtTime(0.001, startTime + noteDuration);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start(startTime);
     osc.stop(startTime + noteDuration);
+  });
+
+  const chordStart = now + notes.length * noteDuration;
+  const chordDuration = 0.5;
+  [1046.5, 1318.5, 1568].forEach((freq) => { // held C-E-G chord, an octave up
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(freq, chordStart);
+
+    gain.gain.setValueAtTime(0.12, chordStart);
+    gain.gain.exponentialRampToValueAtTime(0.001, chordStart + chordDuration);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(chordStart);
+    osc.stop(chordStart + chordDuration);
   });
 }
 

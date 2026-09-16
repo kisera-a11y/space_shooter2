@@ -229,6 +229,23 @@ triangle-wave bass) plays while a run is active (starts on Space to
 begin, stops on game over), alongside the laser-fire, enemy-fire, and
 explosion sound effects.
 
+Level-related events each get their own distinct cue rather than
+sharing one sound:
+
+- **Power-up pickup** — a short, bright two-note triangle-wave "ping",
+  deliberately light and quick so it never gets confused with a level
+  change.
+- **Weapon level-up** — a bright square-wave arpeggio, each note backed
+  by a quieter fifth above it (a small power chord) so a routine
+  level-up still feels like an upgrade.
+- **Weapon level-down** — the level-up arpeggio played in reverse on a
+  sawtooth wave, since losing a life can now demote your weapon tier
+  (see above).
+- **Milestones** — reaching the final weapon tier or defeating the
+  final boss gets a longer, bigger fanfare instead of the routine
+  level-up sound: a longer rising run that resolves into a held chord,
+  so it's unmistakably a bigger moment than a normal level-up.
+
 ## What's next
 
 This is intentionally a minimal, playable prototype. Natural next steps

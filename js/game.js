@@ -1,4 +1,4 @@
-import { CANVAS_WIDTH, CANVAS_HEIGHT, ALIEN, ALIEN_TYPES, METEOR, PLAYER, POWERUP, BOSS, FINAL_BOSS, WAVE_TRANSITION, STATE } from './config.js';
+import { CANVAS_WIDTH, CANVAS_HEIGHT, ALIEN, ALIEN_TYPES, METEOR, PLAYER, POWERUP, BOSS, FINAL_BOSS, WAVE_TRANSITION, STATE, WEAPON_LEVELS } from './config.js';
 import { Player } from './entities/player.js';
 import { Alien } from './entities/alien.js';
 import { Meteor } from './entities/meteor.js';
@@ -7,7 +7,7 @@ import { PowerUp } from './entities/powerup.js';
 import { Boss } from './entities/boss.js';
 import { FinalBoss } from './entities/finalBoss.js';
 import { Starfield } from './starfield.js';
-import { playExplosionSound, startBackgroundMusic, stopBackgroundMusic, playLevelUpSound, playLevelDownSound } from './audio.js';
+import { playExplosionSound, startBackgroundMusic, stopBackgroundMusic, playLevelUpSound, playLevelDownSound, playPowerUpSound, playMilestoneSound } from './audio.js';
 import { getHighScores, recordScore } from './highscores.js';
 
 function randomBetween(min, max) {
@@ -299,7 +299,7 @@ export class Game {
           this.boss = null;
           if (isFinalBoss) {
             this.milestoneLabelTimer = 3;
-            playLevelUpSound();
+            playMilestoneSound();
           }
         }
       }
@@ -336,6 +336,7 @@ export class Game {
     } else if (powerup.type === 'laser') {
       this.player.activateChargedLaser(POWERUP.types.laser.duration);
     }
+    playPowerUpSound();
 
     this.explosions.push(
       new Explosion(powerup.x + powerup.width / 2, powerup.y + powerup.height / 2, {
@@ -347,9 +348,16 @@ export class Game {
     );
   }
 
+  // Reaching the last weapon tier for the first time gets the bigger
+  // milestone fanfare instead of the routine level-up chord, same as
+  // defeating the final boss.
   _showLevelUp() {
     this.levelUpLabelTimer = 1.2;
-    playLevelUpSound();
+    if (this.player.level === WEAPON_LEVELS.length) {
+      playMilestoneSound();
+    } else {
+      playLevelUpSound();
+    }
   }
 
   _showLevelDown() {
