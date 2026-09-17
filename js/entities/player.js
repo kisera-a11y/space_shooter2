@@ -128,24 +128,26 @@ export class Player {
   }
 
   _fire(bullets) {
-    const bulletY = this.y - BULLET.height;
-
     // The charged-laser power-up overrides the weapon tier entirely while
     // it's active — a single wide, piercing shot regardless of level.
     if (this.chargedLaserTimeRemaining > 0) {
+      const bulletY = this.y - BULLET.chargedHeight;
       const bulletX = this.x + this.width / 2 - BULLET.chargedWidth / 2;
       bullets.push(
         new Bullet(bulletX, bulletY, {
           width: BULLET.chargedWidth,
+          height: BULLET.chargedHeight,
           damage: BULLET.chargedDamage,
           pierce: true,
           color: BULLET.chargedColor,
+          charged: true,
         })
       );
       playFireSound(true);
       return;
     }
 
+    const bulletY = this.y - BULLET.height;
     const { bulletCount, spreadAngle } = this.weapon;
     const parallelSpacing = 10; // px between barrels when firing straight up
 

@@ -141,8 +141,11 @@ drop a falling pickup; touch it with the ship to collect:
 
 - **Charged laser** (cyan bolt) — for a few seconds, shots are wider,
   pierce through aliens instead of stopping at the first one, and deal
-  enough damage to one-shot any current alien type. The ship glows while
-  it's active, and the HUD shows the time remaining.
+  enough damage to one-shot any current alien type. Shots render as a
+  glowing, pulsing beam (a soft outer glow around a white-hot core,
+  `Bullet._drawChargedBeam()`) instead of a plain rectangle, so they
+  actually look like the strongest shot in the game. The ship glows
+  while it's active, and the HUD shows the time remaining.
 - **Extra life** (red plus) — an immediate `+1` life.
 - **Shield** (teal badge) — grants a shield charge, shown as a ring
   around the ship with one small marker per charge (stacks up to

@@ -30,9 +30,12 @@ export const BULLET = {
   speed: 480, // pixels per second, upward
   color: '#ffe066',
   // Fired instead of a normal bullet while the charged-laser power-up is
-  // active: wider, stronger, and pierces through aliens instead of
-  // being destroyed on the first hit.
-  chargedWidth: 10,
+  // active: wider, taller, stronger, and pierces through aliens instead
+  // of being destroyed on the first hit. Bullet.draw() renders it as a
+  // glowing layered beam (outer glow + core) rather than a flat rect, to
+  // actually look like the strongest shot in the game.
+  chargedWidth: 20,
+  chargedHeight: 30,
   chargedDamage: 3,
   chargedColor: '#8be9ff',
 };
