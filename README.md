@@ -146,7 +146,10 @@ drop a falling pickup; touch it with the ship to collect:
   `Bullet._drawChargedBeam()`) instead of a plain rectangle, so they
   actually look like the strongest shot in the game. The ship glows
   while it's active, and the HUD shows the time remaining.
-- **Extra life** (red plus) — an immediate `+1` life.
+- **Extra life** (red plus) — the rarest drop of the three (half the
+  relative pick weight of a shield, a sixth of a laser). An immediate
+  `+1` life, capped at `PLAYER.maxLives` (3) — collecting one while
+  already at the cap does nothing.
 - **Shield** (teal badge) — grants a shield charge, shown as a ring
   around the ship with one small marker per charge (stacks up to
   `POWERUP.types.shield.maxCharges`). The next hit(s) — from an alien,

@@ -345,7 +345,7 @@ export class Game {
 
   _applyPowerUp(powerup) {
     if (powerup.type === 'life') {
-      this.lives += 1;
+      this.lives = Math.min(PLAYER.maxLives, this.lives + 1);
     } else if (powerup.type === 'laser') {
       this.player.activateChargedLaser(POWERUP.types.laser.duration);
     } else if (powerup.type === 'shield') {

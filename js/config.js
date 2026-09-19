@@ -19,6 +19,7 @@ export const PLAYER = {
   speed: 320, // pixels per second
   color: '#4fd1ff',
   startLives: 3,
+  maxLives: 3, // an extra-life pickup above this cap is collected but does nothing
   fireCooldown: 0.25, // seconds between shots
   respawnDelay: 0.8, // seconds hidden/inactive after losing a life
   shieldHitInvulnerability: 0.6, // seconds of immunity right after a shield absorbs a hit
@@ -192,9 +193,12 @@ export const POWERUP = {
       weight: 3, // relative pick weight — more common than an extra life
       duration: 8, // seconds the charged laser stays active once collected
     },
+    // Rarest drop — halved again relative to the others so running low
+    // on lives isn't bailed out too easily, and capped at PLAYER.maxLives
+    // (see Game._applyPowerUp()) so it's not worth stockpiling either.
     life: {
       color: '#ff6b6b',
-      weight: 1,
+      weight: 0.5,
     },
     // Absorbs the next hit(s) instead of costing a life/weapon level (see
     // Game._absorbHitWithShield()). Charges stack up to maxCharges rather
